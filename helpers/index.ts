@@ -4,6 +4,7 @@ import { store } from '../store';
 import { Items } from '../store/items';
 import { imagepath } from '../store/imagepath';
 import { fetchNui } from '../utils/fetchNui';
+import { CLOTHING_ITEM_REGISTRY } from '../typings/clothing';
 
 export const canPurchaseItem = (item: Slot, inventory: { type: Inventory['type']; groups: Inventory['groups'] }) => {
   if (inventory.type !== 'shop' || !isSlotWithItem(item)) return true;
@@ -14,7 +15,6 @@ export const canPurchaseItem = (item: Slot, inventory: { type: Inventory['type']
 
   const leftInventory = store.getState().inventory.leftInventory;
 
-  // Shop requires groups but player has none
   if (!leftInventory.groups) return false;
 
   const reqGroups = Object.keys(inventory.groups);
@@ -22,28 +22,21 @@ export const canPurchaseItem = (item: Slot, inventory: { type: Inventory['type']
   if (Array.isArray(item.grade)) {
     for (let i = 0; i < reqGroups.length; i++) {
       const reqGroup = reqGroups[i];
-
       if (leftInventory.groups[reqGroup] !== undefined) {
         const playerGrade = leftInventory.groups[reqGroup];
         for (let j = 0; j < item.grade.length; j++) {
-          const reqGrade = item.grade[j];
-
-          if (playerGrade === reqGrade) return true;
+          if (playerGrade === item.grade[j]) return true;
         }
       }
     }
-
     return false;
   } else {
     for (let i = 0; i < reqGroups.length; i++) {
       const reqGroup = reqGroups[i];
       if (leftInventory.groups[reqGroup] !== undefined) {
-        const playerGrade = leftInventory.groups[reqGroup];
-
-        if (playerGrade >= item.grade) return true;
+        if (leftInventory.groups[reqGroup] >= item.grade) return true;
       }
     }
-
     return false;
   }
 };
@@ -66,7 +59,6 @@ export const canCraftItem = (item: Slot, inventoryType: string) => {
       if (isSlotWithItem(playerItem) && playerItem.name === item) {
         if (count < 1) {
           if (playerItem.metadata?.durability >= count * 100) return true;
-
           return false;
         }
       }
@@ -85,12 +77,32 @@ export const isSlotWithItem = (slot: Slot, strict: boolean = false): slot is Slo
 export const canStack = (sourceSlot: Slot, targetSlot: Slot) =>
   sourceSlot.name === targetSlot.name && isEqual(sourceSlot.metadata, targetSlot.metadata);
 
-export const findAvailableSlot = (item: Slot, data: ItemData, items: Slot[]) => {
-  if (!data.stack) return items.find((target) => target.name === undefined);
+/**
+ * Cek apakah slot index tertentu adalah clothing slot.
+ * Clothing slots dimulai dari index baseSlots (0-based) ke atas.
+ */
+export const isClothingSlotIndex = (slotNumber: number, inventory: Inventory): boolean => {
+  if (inventory.type !== 'player') return false;
+  const baseSlots = inventory.baseSlots ?? inventory.slots;
+  return slotNumber > baseSlots;
+};
 
-  const stackableSlot = items.find((target) => target.name === item.name && isEqual(target.metadata, item.metadata));
+/**
+ * findAvailableSlot — FIX BUG 2:
+ * Hanya cari slot di range base slot (1..baseSlots).
+ * Clothing slots (baseSlots+1..end) TIDAK boleh dipakai sebagai target auto-drop.
+ */
+export const findAvailableSlot = (item: Slot, data: ItemData, items: Slot[], baseSlots?: number) => {
+  // Batasi pencarian hanya ke base slots jika baseSlots diberikan
+  const searchItems = baseSlots != null ? items.slice(0, baseSlots) : items;
 
-  return stackableSlot || items.find((target) => target.name === undefined);
+  if (!data.stack) return searchItems.find((target) => target.name === undefined);
+
+  const stackableSlot = searchItems.find(
+    (target) => target.name === item.name && isEqual(target.metadata, item.metadata)
+  );
+
+  return stackableSlot || searchItems.find((target) => target.name === undefined);
 };
 
 export const getTargetInventory = (
@@ -109,8 +121,6 @@ export const getTargetInventory = (
 });
 
 export const itemDurability = (metadata: any, curTime: number) => {
-  // sorry dunak
-  // it's ok linden i fix inventory
   if (metadata?.durability === undefined) return;
 
   let durability = metadata.durability;
@@ -142,10 +152,7 @@ export const getItemUrl = (item: string | SlotWithItem) => {
 
   if (isObj) {
     if (!item.name) return;
-
     const metadata = item.metadata;
-
-    // @todo validate urls and support webp
     if (metadata?.imageurl) return `${metadata.imageurl}`;
     if (metadata?.image) return `${imagepath}/${metadata.image}.png`;
   }
@@ -159,4 +166,52 @@ export const getItemUrl = (item: string | SlotWithItem) => {
   itemData.image = `${imagepath}/${itemName}.png`;
 
   return itemData.image;
+};
+
+/**
+ * Cek apakah item clothing cocok dengan clothing slot tertentu.
+ * FIX BUG 1: dipakai di InventorySlot canDrop untuk clothing slot di grid.
+ */
+export const itemMatchesClothingSlot = (
+  item: SlotWithItem,
+  clothingSlotIndex: number // 0-based index dari baseSlots
+): boolean => {
+  // Urutan harus sama persis dengan CLOTHING_SLOT_ORDER di CharacterOutfit & sv_clothing
+  const CLOTHING_SLOT_ORDER = [
+    { category: 'clothes', componentId: 0  },
+    { category: 'clothes', componentId: 1  },
+    { category: 'clothes', componentId: 2  },
+    { category: 'clothes', componentId: 3  },
+    { category: 'clothes', componentId: 4  },
+    { category: 'clothes', componentId: 5  },
+    { category: 'clothes', componentId: 6  },
+    { category: 'clothes', componentId: 7  },
+    { category: 'clothes', componentId: 8  },
+    { category: 'clothes', componentId: 9  },
+    { category: 'clothes', componentId: 10 },
+    { category: 'clothes', componentId: 11 },
+    { category: 'props',   componentId: 0  },
+    { category: 'props',   componentId: 1  },
+    { category: 'props',   componentId: 2  },
+    { category: 'props',   componentId: 6  },
+    { category: 'props',   componentId: 7  },
+  ];
+
+  const slotDef = CLOTHING_SLOT_ORDER[clothingSlotIndex];
+  if (!slotDef) return false;
+
+  // Cek dari metadata item (paling akurat)
+  const meta = item.metadata || {};
+  if (meta.clothingCategory !== undefined || meta.clothingComponentId !== undefined) {
+    if (!meta.clothingCategory) return false;
+    if (meta.clothingCategory !== slotDef.category) return false;
+    if (meta.clothingComponentId !== undefined) return Number(meta.clothingComponentId) === slotDef.componentId;
+    return true;
+  }
+
+  // Fallback ke registry
+  const reg = CLOTHING_ITEM_REGISTRY[item.name];
+  if (reg) return reg.category === slotDef.category && reg.componentId === slotDef.componentId;
+
+  return false;
 };

@@ -9,6 +9,9 @@ import { SlotWithItem } from '../../typings';
 import { Items } from '../../store/items';
 import Fade from './transitions/Fade';
 
+// Item yang tidak perlu muncul di notifikasi
+const HIDDEN_NOTIFICATION_ITEMS = ['clothing_reserved'];
+
 interface ItemNotificationProps {
   item: SlotWithItem;
   text: string;
@@ -19,22 +22,18 @@ export const ItemNotificationsContext = React.createContext<{
 } | null>(null);
 
 export const useItemNotifications = () => {
-  const itemNotificationsContext = useContext(ItemNotificationsContext);
-  if (!itemNotificationsContext) throw new Error(`ItemNotificationsContext undefined`);
-  return itemNotificationsContext;
+  const ctx = useContext(ItemNotificationsContext);
+  if (!ctx) throw new Error(`ItemNotificationsContext undefined`);
+  return ctx;
 };
 
 const ItemNotification = React.forwardRef(
   (props: { item: ItemNotificationProps; style?: React.CSSProperties }, ref: React.ForwardedRef<HTMLDivElement>) => {
     const slotItem = props.item.item;
-
     return (
       <div
         className="item-notification-item-box"
-        style={{
-          backgroundImage: `url(${getItemUrl(slotItem) || 'none'}`,
-          ...props.style,
-        }}
+        style={{ backgroundImage: `url(${getItemUrl(slotItem) || 'none'}`, ...props.style }}
         ref={ref}
       >
         <div className="item-slot-wrapper">
@@ -51,26 +50,19 @@ const ItemNotification = React.forwardRef(
 );
 
 export const ItemNotificationsProvider = ({ children }: { children: React.ReactNode }) => {
-  const queue = useQueue<{
-    id: number;
-    item: ItemNotificationProps;
-    ref: React.RefObject<HTMLDivElement>;
-  }>();
+  const queue = useQueue<{ id: number; item: ItemNotificationProps; ref: React.RefObject<HTMLDivElement> }>();
 
   const add = (item: ItemNotificationProps) => {
     const ref = React.createRef<HTMLDivElement>();
-    const notification = { id: Date.now(), item, ref: ref };
-
-    queue.add(notification);
-
-    const timeout = setTimeout(() => {
-      queue.remove();
-      clearTimeout(timeout);
-    }, 2500);
+    queue.add({ id: Date.now(), item, ref });
+    const timeout = setTimeout(() => { queue.remove(); clearTimeout(timeout); }, 2500);
   };
 
   useNuiEvent<[item: SlotWithItem, text: string, count?: number]>('itemNotify', ([item, text, count]) => {
-    add({ item: item, text: count ? `${Locale[text]} ${count}x` : `${Locale[text]}` });
+    // Jangan tampilkan notifikasi untuk item reserved/placeholder
+    if (HIDDEN_NOTIFICATION_ITEMS.includes(item?.name)) return;
+
+    add({ item, text: count ? `${Locale[text]} ${count}x` : `${Locale[text]}` });
   });
 
   return (
