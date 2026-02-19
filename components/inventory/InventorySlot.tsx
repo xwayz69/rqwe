@@ -1,7 +1,7 @@
 import React, { useCallback, useRef } from 'react';
 import { DragSource, Inventory, InventoryType, Slot, SlotWithItem } from '../../typings';
 import { useDrag, useDragDropManager, useDrop } from 'react-dnd';
-import { useAppDispatch, useAppSelector } from '../../store';
+import { useAppDispatch } from '../../store';
 import WeightBar from '../utils/WeightBar';
 import { onDrop } from '../../dnd/onDrop';
 import { onBuy } from '../../dnd/onBuy';
@@ -27,24 +27,28 @@ const InventorySlot: React.ForwardRefRenderFunction<HTMLDivElement, SlotProps> =
   { item, inventoryId, inventoryType, inventoryGroups },
   ref
 ) => {
-  const manager  = useDragDropManager();
+  const manager = useDragDropManager();
   const dispatch = useAppDispatch();
   const timerRef = useRef<number | null>(null);
 
   const canDrag = useCallback(() => {
-    return canPurchaseItem(item, { type: inventoryType, groups: inventoryGroups }) &&
-           canCraftItem(item, inventoryType);
+    return canPurchaseItem(item, { type: inventoryType, groups: inventoryGroups }) && canCraftItem(item, inventoryType);
   }, [item, inventoryType, inventoryGroups]);
 
   const [{ isDragging }, drag] = useDrag<DragSource, void, { isDragging: boolean }>(
     () => ({
       type: 'SLOT',
-      collect: (monitor) => ({ isDragging: monitor.isDragging() }),
+      collect: (monitor) => ({
+        isDragging: monitor.isDragging(),
+      }),
       item: () =>
         isSlotWithItem(item, inventoryType !== InventoryType.SHOP)
           ? {
               inventory: inventoryType,
-              item: { name: item.name, slot: item.slot },
+              item: {
+                name: item.name,
+                slot: item.slot,
+              },
               image: item?.name && `url(${getItemUrl(item) || 'none'}`,
             }
           : null,
@@ -53,10 +57,12 @@ const InventorySlot: React.ForwardRefRenderFunction<HTMLDivElement, SlotProps> =
     [inventoryType, item]
   );
 
-  const [{ isOver, canDrop }, drop] = useDrop<DragSource, void, { isOver: boolean; canDrop: boolean }>(
+  const [{ isOver }, drop] = useDrop<DragSource, void, { isOver: boolean }>(
     () => ({
       accept: 'SLOT',
-      collect: (monitor) => ({ isOver: monitor.isOver(), canDrop: monitor.canDrop() }),
+      collect: (monitor) => ({
+        isOver: monitor.isOver(),
+      }),
       drop: (source) => {
         dispatch(closeTooltip());
         switch (source.inventory) {
@@ -71,12 +77,10 @@ const InventorySlot: React.ForwardRefRenderFunction<HTMLDivElement, SlotProps> =
             break;
         }
       },
-      canDrop: (source: any) => {
-        if (source.fromClothingSlot) return false; // block drop dari clothing panel ke inv biasa lewat sini
-        if (source.item.slot === item.slot && source.inventory === inventoryType) return false;
-        if (inventoryType === InventoryType.SHOP || inventoryType === InventoryType.CRAFTING) return false;
-        return true;
-      },
+      canDrop: (source) =>
+        (source.item.slot !== item.slot || source.inventory !== inventoryType) &&
+        inventoryType !== InventoryType.SHOP &&
+        inventoryType !== InventoryType.CRAFTING,
     }),
     [inventoryType, item]
   );
@@ -84,22 +88,22 @@ const InventorySlot: React.ForwardRefRenderFunction<HTMLDivElement, SlotProps> =
   useNuiEvent('refreshSlots', (data: { items?: ItemsPayload | ItemsPayload[] }) => {
     if (!isDragging && !data.items) return;
     if (!Array.isArray(data.items)) return;
+
     const itemSlot = data.items.find(
-      (d) => d.item.slot === item.slot && d.inventory === inventoryId
+      (dataItem) => dataItem.item.slot === item.slot && dataItem.inventory === inventoryId
     );
+
     if (!itemSlot) return;
+
     manager.dispatch({ type: 'dnd-core/END_DRAG' });
   });
 
-  const connectRef = (el: HTMLDivElement | null) => {
-    drag(el);
-    drop(el);
-  };
-  const refs = useMergeRefs([connectRef, ref]);
+  const connectRef = (element: HTMLDivElement) => drag(drop(element));
 
   const handleContext = (event: React.MouseEvent<HTMLDivElement>) => {
     event.preventDefault();
     if (inventoryType !== 'player' || !isSlotWithItem(item)) return;
+
     dispatch(openContextMenu({ item, coords: { x: event.clientX, y: event.clientY } }));
   };
 
@@ -113,11 +117,7 @@ const InventorySlot: React.ForwardRefRenderFunction<HTMLDivElement, SlotProps> =
     }
   };
 
-  const borderOverride = isOver
-    ? canDrop
-      ? '1px dashed rgba(46, 204, 113, 0.8)'
-      : '1px dashed rgba(231, 76, 60, 0.8)'
-    : undefined;
+  const refs = useMergeRefs([connectRef, ref]);
 
   return (
     <div
@@ -127,13 +127,12 @@ const InventorySlot: React.ForwardRefRenderFunction<HTMLDivElement, SlotProps> =
       className="inventory-slot"
       style={{
         filter:
-          (!canPurchaseItem(item, { type: inventoryType, groups: inventoryGroups }) ||
-            !canCraftItem(item, inventoryType))
+          !canPurchaseItem(item, { type: inventoryType, groups: inventoryGroups }) || !canCraftItem(item, inventoryType)
             ? 'brightness(80%) grayscale(100%)'
             : undefined,
         opacity: isDragging ? 0.4 : 1.0,
-        backgroundImage: isSlotWithItem(item) ? `url(${getItemUrl(item as SlotWithItem)})` : undefined,
-        border: borderOverride,
+        backgroundImage: `url(${item?.name ? getItemUrl(item as SlotWithItem) : 'none'}`,
+        border: isOver ? '1px dashed rgba(255,255,255,0.4)' : '',
       }}
     >
       {isSlotWithItem(item) && (
@@ -146,25 +145,28 @@ const InventorySlot: React.ForwardRefRenderFunction<HTMLDivElement, SlotProps> =
           }}
           onMouseLeave={() => {
             dispatch(closeTooltip());
-            if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
+            if (timerRef.current) {
+              clearTimeout(timerRef.current);
+              timerRef.current = null;
+            }
           }}
         >
           <div
             className={
-              inventoryType === 'player' && item.slot <= 5
-                ? 'item-hotslot-header-wrapper'
-                : 'item-slot-header-wrapper'
+              inventoryType === 'player' && item.slot <= 5 ? 'item-hotslot-header-wrapper' : 'item-slot-header-wrapper'
             }
           >
-            {inventoryType === 'player' && item.slot <= 5 && (
-              <div className="inventory-slot-number">{item.slot}</div>
-            )}
+            {inventoryType === 'player' && item.slot <= 5 && <div className="inventory-slot-number">{item.slot}</div>}
             <div className="item-slot-info-wrapper">
               <p>
                 {item.weight > 0
                   ? item.weight >= 1000
-                    ? `${(item.weight / 1000).toLocaleString('en-us', { minimumFractionDigits: 2 })}kg `
-                    : `${item.weight.toLocaleString('en-us', { minimumFractionDigits: 0 })}g `
+                    ? `${(item.weight / 1000).toLocaleString('en-us', {
+                        minimumFractionDigits: 2,
+                      })}kg `
+                    : `${item.weight.toLocaleString('en-us', {
+                        minimumFractionDigits: 0,
+                      })}g `
                   : ''}
               </p>
               <p>{item.count ? item.count.toLocaleString('en-us') + `x` : ''}</p>
@@ -181,16 +183,30 @@ const InventorySlot: React.ForwardRefRenderFunction<HTMLDivElement, SlotProps> =
                     <img
                       src={item.currency ? getItemUrl(item.currency) : 'none'}
                       alt="item-image"
-                      style={{ imageRendering: '-webkit-optimize-contrast', height: 'auto', width: '2vh', backfaceVisibility: 'hidden', transform: 'translateZ(0)' }}
+                      style={{
+                        imageRendering: '-webkit-optimize-contrast',
+                        height: 'auto',
+                        width: '2vh',
+                        backfaceVisibility: 'hidden',
+                        transform: 'translateZ(0)',
+                      }}
                     />
                     <p>{item.price.toLocaleString('en-us')}</p>
                   </div>
                 ) : (
-                  item.price > 0 && (
-                    <div className="item-slot-price-wrapper" style={{ color: item.currency === 'money' || !item.currency ? '#2ECC71' : '#E74C3C' }}>
-                      <p>{Locale.$ || '$'}{item.price.toLocaleString('en-us')}</p>
-                    </div>
-                  )
+                  <>
+                    {item.price > 0 && (
+                      <div
+                        className="item-slot-price-wrapper"
+                        style={{ color: item.currency === 'money' || !item.currency ? '#2ECC71' : '#E74C3C' }}
+                      >
+                        <p>
+                          {Locale.$ || '$'}
+                          {item.price.toLocaleString('en-us')}
+                        </p>
+                      </div>
+                    )}
+                  </>
                 )}
               </>
             )}

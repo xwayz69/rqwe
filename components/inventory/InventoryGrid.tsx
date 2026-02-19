@@ -20,9 +20,12 @@ const InventoryGrid: React.FC<{ inventory: Inventory }> = ({ inventory }) => {
     }
   }, [entry]);
 
-  // Pure base slots only — tidak ada clothing slots di sini
-  const displayItems = inventory.items.slice(0, inventory.slots);
+  // Untuk player inventory: hanya tampilkan slot 1..baseSlots
+  // Clothing slots (baseSlots+1 .. end) hanya tampil di panel CharacterOutfit
+  const baseSlots   = inventory.baseSlots ?? inventory.slots;
+  const displayItems = inventory.items.slice(0, baseSlots);
 
+  // Hitung berat hanya dari slot inventory biasa (exclude clothing slots)
   const weight = useMemo(
     () =>
       inventory.maxWeight !== undefined
@@ -32,30 +35,33 @@ const InventoryGrid: React.FC<{ inventory: Inventory }> = ({ inventory }) => {
   );
 
   return (
-    <div className="inventory-grid-wrapper" style={{ pointerEvents: isBusy ? 'none' : 'auto' }}>
-      <div>
-        <div className="inventory-grid-header-wrapper">
-          <p>{inventory.label}</p>
-          {inventory.maxWeight && (
-            <p>{weight / 1000}/{inventory.maxWeight / 1000}kg</p>
-          )}
+    <>
+      <div className="inventory-grid-wrapper" style={{ pointerEvents: isBusy ? 'none' : 'auto' }}>
+        <div>
+          <div className="inventory-grid-header-wrapper">
+            <p>{inventory.label}</p>
+            {inventory.maxWeight && (
+              <p>
+                {weight / 1000}/{inventory.maxWeight / 1000}kg
+              </p>
+            )}
+          </div>
+          <WeightBar percent={inventory.maxWeight ? (weight / inventory.maxWeight) * 100 : 0} />
         </div>
-        <WeightBar percent={inventory.maxWeight ? (weight / inventory.maxWeight) * 100 : 0} />
+        <div className="inventory-grid-container" ref={containerRef}>
+          {displayItems.slice(0, (page + 1) * PAGE_SIZE).map((item, index) => (
+            <InventorySlot
+              key={`${inventory.type}-${inventory.id}-${item.slot}`}
+              item={item}
+              ref={index === (page + 1) * PAGE_SIZE - 1 ? ref : null}
+              inventoryType={inventory.type}
+              inventoryGroups={inventory.groups}
+              inventoryId={inventory.id}
+            />
+          ))}
+        </div>
       </div>
-
-      <div className="inventory-grid-container" ref={containerRef}>
-        {displayItems.slice(0, (page + 1) * PAGE_SIZE).map((item, index) => (
-          <InventorySlot
-            key={`${inventory.type}-${inventory.id}-${item.slot}`}
-            item={item}
-            ref={index === (page + 1) * PAGE_SIZE - 1 ? ref : null}
-            inventoryType={inventory.type}
-            inventoryGroups={inventory.groups}
-            inventoryId={inventory.id}
-          />
-        ))}
-      </div>
-    </div>
+    </>
   );
 };
 

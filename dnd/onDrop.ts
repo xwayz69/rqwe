@@ -16,26 +16,24 @@ export const onDrop = (source: DragSource, target?: DropTarget) => {
 
   if (sourceData === undefined) return console.error(`${sourceSlot.name} item data undefined!`);
 
+  // If dragging from container slot
   if (sourceSlot.metadata?.container !== undefined) {
+    // Prevent storing container in container
     if (targetInventory.type === InventoryType.CONTAINER)
       return console.log(`Cannot store container ${sourceSlot.name} inside another container`);
+
+    // Prevent dragging of container slot when opened
     if (state.rightInventory.id === sourceSlot.metadata.container)
       return console.log(`Cannot move container ${sourceSlot.name} when opened`);
   }
 
-  // FIX BUG 2: Batasi findAvailableSlot hanya ke base slots
-  // Clothing slots tidak boleh jadi target auto-drop
-  const targetBaseSlots =
-    targetInventory.type === 'player' && targetInventory.baseSlots != null
-      ? targetInventory.baseSlots
-      : undefined;
-
   const targetSlot = target
     ? targetInventory.items[target.item.slot - 1]
-    : findAvailableSlot(sourceSlot, sourceData, targetInventory.items, targetBaseSlots);
+    : findAvailableSlot(sourceSlot, sourceData, targetInventory.items);
 
   if (targetSlot === undefined) return console.error('Target slot undefined!');
 
+  // If dropping on container slot when opened
   if (targetSlot.metadata?.container !== undefined && state.rightInventory.id === targetSlot.metadata.container)
     return console.log(`Cannot swap item ${sourceSlot.name} with container ${targetSlot.name} when opened`);
 
@@ -64,7 +62,17 @@ export const onDrop = (source: DragSource, target?: DropTarget) => {
 
   isSlotWithItem(targetSlot, true)
     ? sourceData.stack && canStack(sourceSlot, targetSlot)
-      ? store.dispatch(stackSlots({ ...data, toSlot: targetSlot }))
-      : store.dispatch(swapSlots({ ...data, toSlot: targetSlot }))
+      ? store.dispatch(
+          stackSlots({
+            ...data,
+            toSlot: targetSlot,
+          })
+        )
+      : store.dispatch(
+          swapSlots({
+            ...data,
+            toSlot: targetSlot,
+          })
+        )
     : store.dispatch(moveSlots(data));
 };
