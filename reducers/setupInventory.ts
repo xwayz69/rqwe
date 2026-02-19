@@ -4,6 +4,7 @@ import { Items } from '../store/items';
 import { Inventory, State } from '../typings';
 
 const CLOTHING_SLOT_COUNT = 17; // 12 clothes + 5 props
+const RESERVED_ITEM = 'clothing_reserved';
 
 export const setupInventoryReducer: CaseReducer<
   State,
@@ -21,21 +22,15 @@ export const setupInventoryReducer: CaseReducer<
     let baseSlots: number;
 
     if (!isPlayer) {
-      // Non-player inventory: tidak ada clothing slots
       baseSlots = leftInventory.slots;
     } else if (leftInventory.baseSlots != null) {
-      // Server sudah kirim baseSlots secara eksplisit — pakai itu
       baseSlots = leftInventory.baseSlots;
     } else if (leftInventory.slots > CLOTHING_SLOT_COUNT) {
-      // Server kirim total slots (base + clothing) — hitung baseSlots
-      // Asumsi: kalau slots > 17, kemungkinan sudah include clothing slots
-      // Tapi ini tidak reliable, lebih baik server selalu kirim baseSlots
       baseSlots = leftInventory.slots - CLOTHING_SLOT_COUNT;
     } else {
       baseSlots = leftInventory.slots;
     }
 
-    // Total array selalu base + clothing agar slot clothing bisa disimpan
     const totalSlots = isPlayer ? baseSlots + CLOTHING_SLOT_COUNT : baseSlots;
 
     state.leftInventory = {
@@ -43,11 +38,17 @@ export const setupInventoryReducer: CaseReducer<
       baseSlots: isPlayer ? baseSlots : undefined,
       slots: totalSlots,
       items: Array.from(Array(totalSlots), (_, index) => {
-        const item = Object.values(leftInventory.items).find((item) => item?.slot === index + 1) || {
-          slot: index + 1,
+        const slotNum = index + 1;
+        const item = Object.values(leftInventory.items).find((item) => item?.slot === slotNum) || {
+          slot: slotNum,
         };
 
         if (!item.name) return item;
+
+        // DEBUG: clothing_reserved ditampilkan di base slots (temporary)
+        // if (item.name === RESERVED_ITEM && slotNum <= baseSlots) {
+        //   return { slot: slotNum };
+        // }
 
         if (typeof Items[item.name] === 'undefined') {
           getItemData(item.name);

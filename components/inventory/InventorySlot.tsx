@@ -48,9 +48,8 @@ const InventorySlot: React.ForwardRefRenderFunction<HTMLDivElement, SlotProps> =
   // Treat item clothing_reserved sebagai slot kosong secara visual
   const isReservedItem = (item as SlotWithItem)?.name === RESERVED_ITEM;
   const visuallyEmpty  = !isSlotWithItem(item) || isReservedItem;
-
+console.log('slot', item.slot, 'name:', (item as any).name);
   const dragType = isClothingSlot ? SLOT_TYPE_CLOTHING : SLOT_TYPE_NORMAL;
-
   const canDrag = useCallback(() => {
     if (isReservedItem) return false; // placeholder tidak bisa di-drag
     return canPurchaseItem(item, { type: inventoryType, groups: inventoryGroups }) && canCraftItem(item, inventoryType);
@@ -114,9 +113,13 @@ const InventorySlot: React.ForwardRefRenderFunction<HTMLDivElement, SlotProps> =
             break;
         }
       },
-      canDrop: (source) => {
+      canDrop: (source: any) => {
         if (source.item.slot === item.slot && source.inventory === inventoryType) return false;
         if (inventoryType === InventoryType.SHOP || inventoryType === InventoryType.CRAFTING) return false;
+        // Kalau drag dari clothing slot (CharacterOutfit), hanya boleh ke slot kosong
+        // Slot clothing_reserved dianggap kosong
+        const targetIsEmpty = !isSlotWithItem(item) || isReservedItem;
+        if (source.fromClothingSlot && !targetIsEmpty) return false;
         return true;
       },
     }),
