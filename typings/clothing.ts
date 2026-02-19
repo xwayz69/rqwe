@@ -1,7 +1,6 @@
 // Clothing System Types
 export type ClothingCategory = 'clothes' | 'props';
 
-
 export interface ClothingSlotDef {
   id: number;
   part: string;
@@ -49,39 +48,51 @@ export const PROPS_SLOTS: ClothingSlotDef[] = [
 
 export const getSlotKey = (slot: ClothingSlotDef) => `${slot.category}_${slot.id}`;
 
-// ─── Clothing Item Registry ───────────────────────────────────────────────────
-// Daftarkan semua item clothing di sini.
-// Format: 'item_name': { category, componentId }
-//
-// CLOTHES component IDs:
-//   0=Head  1=Masks  2=Hair  3=Torsos  4=Legs  5=Bags
-//   6=Shoes  7=Accessories  8=Undershirts  9=Armor  10=Decals  11=Tops
-//
-// PROPS IDs:
-//   0=Hats  1=Glasses  2=Ears  6=Watches  7=Bracelets
+// ─── Slot Order (harus sama dengan sv_clothing.lua CLOTHING_SLOT_ORDER) ───────
+// Index ini menentukan nomor slot di inventory (baseSlots + index + 1)
+export const CLOTHING_SLOT_ORDER: Array<{ category: string; id: number }> = [
+  { category: 'clothes', id: 0  }, // slot baseSlots+1  — Head
+  { category: 'clothes', id: 1  }, // slot baseSlots+2  — Masks
+  { category: 'clothes', id: 2  }, // slot baseSlots+3  — Hair
+  { category: 'clothes', id: 3  }, // slot baseSlots+4  — Torsos
+  { category: 'clothes', id: 4  }, // slot baseSlots+5  — Legs
+  { category: 'clothes', id: 5  }, // slot baseSlots+6  — Bags
+  { category: 'clothes', id: 6  }, // slot baseSlots+7  — Shoes
+  { category: 'clothes', id: 7  }, // slot baseSlots+8  — Accessories
+  { category: 'clothes', id: 8  }, // slot baseSlots+9  — Undershirts
+  { category: 'clothes', id: 9  }, // slot baseSlots+10 — Body Armors
+  { category: 'clothes', id: 10 }, // slot baseSlots+11 — Decals
+  { category: 'clothes', id: 11 }, // slot baseSlots+12 — Tops
+  { category: 'props',   id: 0  }, // slot baseSlots+13 — Hats
+  { category: 'props',   id: 1  }, // slot baseSlots+14 — Glasses
+  { category: 'props',   id: 2  }, // slot baseSlots+15 — Ears
+  { category: 'props',   id: 6  }, // slot baseSlots+16 — Watches
+  { category: 'props',   id: 7  }, // slot baseSlots+17 — Bracelets
+];
 
+// ─── Clothing Item Registry ───────────────────────────────────────────────────
 export type ClothingItemInfo = {
   category: ClothingCategory;
   componentId: number;
 };
 
 export const CLOTHING_ITEM_REGISTRY: Record<string, ClothingItemInfo> = {
-  clothing_head:        { category: 'clothes',        componentId: 0 },
-  clothing_masks:       { category: 'clothes',       componentId: 1 },
-  clothing_hairstyles:  { category: 'clothes',  componentId: 2 },
-  clothing_torsos:      { category: 'clothes',      componentId: 3 },
-  clothing_legs:        { category: 'clothes',        componentId: 4 },
-  clothing_bags:        { category: 'clothes',        componentId: 5 },
-  clothing_shoes:       { category: 'clothes',       componentId: 6 },
-  clothing_accessories: { category: 'clothes', componentId: 7 },
-  clothing_undershirts: { category: 'clothes', componentId: 8 },
-  clothing_armors:      { category: 'clothes',      componentId: 9 },
-  clothing_decals:      { category: 'clothes',      componentId: 10 },
-  clothing_tops:        { category: 'clothes',        componentId: 11 },
+  clothing_head:        { category: 'clothes', componentId: 0  },
+  clothing_masks:       { category: 'clothes', componentId: 1  },
+  clothing_hairstyles:  { category: 'clothes', componentId: 2  },
+  clothing_torsos:      { category: 'clothes', componentId: 3  },
+  clothing_legs:        { category: 'clothes', componentId: 4  },
+  clothing_bags:        { category: 'clothes', componentId: 5  },
+  clothing_shoes:       { category: 'clothes', componentId: 6  },
+  clothing_accessories: { category: 'clothes', componentId: 7  },
+  clothing_undershirts: { category: 'clothes', componentId: 8  },
+  clothing_armors:      { category: 'clothes', componentId: 9  },
+  clothing_decals:      { category: 'clothes', componentId: 10 },
+  clothing_tops:        { category: 'clothes', componentId: 11 },
 
-  clothing_hats:        { category: 'props',        componentId: 0 },
-  clothing_glasses:     { category: 'props',     componentId: 1 },
-  clothing_ears:        { category: 'props',        componentId: 2 },
-  clothing_watches:     { category: 'props',     componentId: 6 },
-  clothing_bracelets:   { category: 'props',   componentId: 7 },
+  clothing_hats:        { category: 'props', componentId: 0 },
+  clothing_glasses:     { category: 'props', componentId: 1 },
+  clothing_ears:        { category: 'props', componentId: 2 },
+  clothing_watches:     { category: 'props', componentId: 6 },
+  clothing_bracelets:   { category: 'props', componentId: 7 },
 };

@@ -20,9 +20,10 @@ const InventoryGrid: React.FC<{ inventory: Inventory }> = ({ inventory }) => {
     }
   }, [entry]);
 
-  // Untuk player inventory: hanya tampilkan slot 1..baseSlots
-  // Clothing slots (baseSlots+1 .. end) hanya tampil di panel CharacterOutfit
-  const baseSlots   = inventory.baseSlots ?? inventory.slots;
+  // Untuk player inventory: tampilkan HANYA slot 1..baseSlots (slot inventory biasa)
+  // Clothing slots (baseSlots+1 .. end) HANYA tampil di panel CharacterOutfit
+  // baseSlots adalah jumlah slot inventory murni yang dikirim server (misal 20)
+  const baseSlots    = inventory.baseSlots ?? inventory.slots;
   const displayItems = inventory.items.slice(0, baseSlots);
 
   // Hitung berat hanya dari slot inventory biasa (exclude clothing slots)

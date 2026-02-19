@@ -1,31 +1,54 @@
 // ════════════════════════════════════════════════════════════════════════════
-// OX INVENTORY — CEF-Safe, px-based, close to original ox_inventory style
+// OX INVENTORY — Green Glow Modern Theme
 // ════════════════════════════════════════════════════════════════════════════
 
-// ─── Colors ───────────────────────────────────────────────────────────────────
-$color-panel:       #252525;
-$color-border:      rgb(82, 79, 79);
-$color-border-h:    rgba(255, 255, 255, 0.14);
-$color-text:        #d4d4d4;
-$color-text-dim:    rgba(212, 212, 212, 0.45);
-$color-accent:      #4fc3f7;
-$color-accent-dim:  rgba(79, 195, 247, 0.12);
-$color-red:         #ef5350;
-$color-green:       #2ecc71;
+// ─── Colors ──────────────────────────────────────────────────────────────────
+$bg-panel:       #0e1a0e;
+$bg-panel-2:     #122012;
+$bg-slot:        #0a1410;
+$bg-hover:       #152815;
 
-// ─── Font — CEF-safe, NO external fonts ───────────────────────────────────────
-// Rajdhani HARUS diinclude secara lokal di /web/public/fonts/ atau pakai fallback ini
+$border-base:    #1e3d1e;
+$border-hover:   #2d6b2d;
+$border-bright:  #3aff3a;
+
+$text-primary:   #d6ffd6;
+$text-dim:       #7ab87a;
+$text-muted:     #3d6b3d;
+
+// Green neon accent
+$accent:         #39ff14;
+$accent-2:       #00e676;
+$accent-dim:     #1a3d1a;
+$accent-glow:    rgba(57,255,20,0.35);
+$accent-glow-sm: rgba(57,255,20,0.18);
+
+$red:            #ff3b3b;
+$red-dim:        #2a0f0f;
+$yellow:         #f0e040;
+
+// Clothing
+$clothes:        #39ff14;
+$clothes-dim:    #152015;
+$clothes-border: #2a6b2a;
+
+$props:          #f0c040;
+$props-dim:      #1f1a08;
+$props-border:   #5a4a10;
+
+// ─── Font ─────────────────────────────────────────────────────────────────────
 $font: 'Segoe UI', 'Arial', sans-serif;
 
-// ─── Slot/grid sizes — PIXEL-BASED (bukan vh) ────────────────────────────────
-$slot:      80px;
-$cols:      5;
-$rows:      5;
-$gap:       2px;
-$grid-h:    ($slot * $rows) + ($gap * ($rows - 1));
-$cslot:     66px;
+// ─── Sizes ────────────────────────────────────────────────────────────────────
+$slot:   80px;
+$cols:   5;
+$rows:   5;
+$gap:    2px;
+$grid-h: ($slot * $rows) + ($gap * ($rows - 1));
+$cslot:  66px;
+$cprops: 52px;
 
-// ─── Reset ───────────────────────────────────────────────────────────────────
+// ─── Reset ────────────────────────────────────────────────────────────────────
 * { box-sizing: border-box; }
 
 body {
@@ -36,7 +59,7 @@ body {
   overflow: hidden !important;
   user-select: none;
   font-size: 13px;
-  color: $color-text;
+  color: $text-primary;
 }
 
 #root { height: 100%; }
@@ -47,10 +70,9 @@ input[type='number']::-webkit-outer-spin-button { -webkit-appearance: none; }
 button { cursor: pointer; }
 button:active { transform: translateY(1px); }
 
-// ─── App ─────────────────────────────────────────────────────────────────────
-.app-wrapper { height: 100%; width: 100%; color: $color-text; }
+.app-wrapper { height: 100%; width: 100%; color: $text-primary; }
 
-// ─── Root layout ─────────────────────────────────────────────────────────────
+// ─── Root layout ──────────────────────────────────────────────────────────────
 .inv-root {
   display: flex;
   flex-direction: column;
@@ -64,19 +86,23 @@ button:active { transform: translateY(1px); }
   flex-direction: row;
   align-items: flex-start;
   justify-content: center;
-  gap: 10px;
+  gap: 8px;
 }
 .inv-col { display: flex; flex-direction: column; }
 
-// ─── Grid panel ──────────────────────────────────────────────────────────────
+// ─── Grid panel ───────────────────────────────────────────────────────────────
 .inventory-grid-wrapper {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  background: #252525;
-  border: 1px solid $color-border;
-  border-radius: 4px;
-  padding: 8px;
+  gap: 6px;
+  background: $bg-panel;
+  border: 1px solid $border-base;
+  border-radius: 8px;
+  padding: 10px;
+  box-shadow:
+    0 0 0 1px #0a160a,
+    0 4px 24px rgba(0,0,0,0.7),
+    inset 0 1px 0 #1e3d1e;
 }
 .inventory-grid-header-wrapper {
   display: flex;
@@ -85,11 +111,11 @@ button:active { transform: translateY(1px); }
   align-items: center;
   p {
     font-family: $font;
-    font-size: 12px;
-    font-weight: 600;
+    font-size: 11px;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: $color-text;
+    letter-spacing: 1px;
+    color: $text-dim;
   }
 }
 .inventory-grid-container {
@@ -101,49 +127,53 @@ button:active { transform: translateY(1px); }
   overflow-y: auto;
 }
 
-// ─── Slots ───────────────────────────────────────────────────────────────────
+// ─── Inventory Slots ──────────────────────────────────────────────────────────
 .inventory-slot {
-  background-color:  #252525;
+  background-color: $bg-slot;
   background-repeat: no-repeat;
   background-position: center;
-  border-radius: 3px;
+  border-radius: 5px;
   image-rendering: -webkit-optimize-contrast;
   position: relative;
-  background-size: 56px;
-  color: $color-text;
-  border: 1px solid $color-border;
-  transition: border-color 80ms, background-color 80ms;
+  background-size: 58px;
+  color: $text-primary;
+  border: 1px solid $border-base;
+  transition: border-color 100ms, background-color 100ms, box-shadow 100ms;
   &:hover {
-    border-color: $color-border-h;
-    background-color:  #252525;
+    border-color: $border-hover;
+    background-color: $bg-hover;
+    box-shadow: inset 0 0 0 1px #1e3d1e, 0 0 6px $accent-glow-sm;
   }
 }
 .inventory-slot-label-box {
-  background-color: rgba(0, 0, 0, 0.6);
+  background: linear-gradient(transparent, rgba(0,10,0,0.92));
   text-align: center;
-  border-bottom-left-radius: 2px;
-  border-bottom-right-radius: 2px;
+  border-bottom-left-radius: 4px;
+  border-bottom-right-radius: 4px;
 }
 .inventory-slot-label-text {
   text-transform: uppercase;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  padding: 2px 3px;
-  font-weight: 600;
+  padding: 2px 4px;
+  font-weight: 700;
   font-family: $font;
-  font-size: 9px;
+  font-size: 8px;
+  letter-spacing: 0.4px;
+  color: $text-primary;
 }
 .inventory-slot-number {
-  background-color: $color-accent;
+  background: $accent;
   color: #000;
-  height: 12px;
-  border-top-left-radius: 2px;
-  border-bottom-right-radius: 2px;
-  padding: 1px 3px;
-  font-size: 9px;
+  height: 13px;
+  border-top-left-radius: 4px;
+  border-bottom-right-radius: 4px;
+  padding: 1px 4px;
+  font-size: 8px;
   font-family: $font;
-  font-weight: 700;
+  font-weight: 800;
+  text-shadow: none;
 }
 .item-slot-wrapper {
   display: flex;
@@ -163,310 +193,486 @@ button:active { transform: translateY(1px); }
   align-self: flex-end;
   padding: 2px;
   gap: 1px;
-  p { font-size: 10px; font-weight: 600; }
+  p { font-size: 9px; font-weight: 700; color: $text-dim; }
 }
 .item-slot-currency-wrapper {
-  display: flex;
-  flex-direction: row;
-  justify-content: flex-end;
-  align-items: center;
+  display: flex; flex-direction: row; justify-content: flex-end; align-items: center;
   padding-right: 3px;
-  p { font-size: 11px; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
+  p { font-size: 11px; }
 }
 .item-slot-price-wrapper {
-  display: flex;
-  flex-direction: row;
-  justify-content: flex-end;
-  padding-right: 3px;
-  p { font-size: 11px; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
+  display: flex; flex-direction: row; justify-content: flex-end; padding-right: 3px;
+  p { font-size: 11px; }
 }
 
-// ─── Bars ────────────────────────────────────────────────────────────────────
-.weight-bar {
-  background: rgba(0,0,0,0.4);
-  border: 1px solid rgba(255,255,255,0.04);
+// ─── Bars ─────────────────────────────────────────────────────────────────────
+.weight-bar { display: none; }
+
+.durability-bar {
+  background: #0a1410;
+  border: 1px solid $border-base;
   height: 3px;
   border-radius: 2px;
   overflow: hidden;
 }
-.durability-bar {
-  background: rgba(0,0,0,0.5);
-  height: 3px;
+
+// ── Cyberpunk Weight Bar ───────────────────────────────────────────────────
+.weight-bar-cyber {
+  width: 100%;
+  padding: 3px 0 1px;
+}
+.weight-bar-track {
+  position: relative;
+  width: 100%;
+  height: 14px;
+  background: $bg-slot;
+  border: 1px solid $border-base;
+  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 100%, 0 100%);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+}
+.weight-bar-fill {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  min-width: 2px;
+  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 100%, 0 100%);
   overflow: hidden;
 }
+.weight-bar-stripes {
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    -55deg,
+    transparent,
+    transparent 4px,
+    rgba(0,0,0,0.35) 4px,
+    rgba(0,0,0,0.35) 7px
+  );
+  pointer-events: none;
+}
+.weight-bar-pct {
+  position: absolute;
+  right: 14px;
+  font-family: $font;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  line-height: 1;
+  pointer-events: none;
+  z-index: 2;
+}
 
-// ─── Divider ─────────────────────────────────────────────────────────────────
-.divider { width: 100%; height: 1px; background-color: rgba(255,255,255,0.07); margin: 3px 0; }
+// ─── Divider ──────────────────────────────────────────────────────────────────
+.divider {
+  width: 100%;
+  height: 1px;
+  background: $border-base;
+  margin: 4px 0;
+}
 
-// ─── Bottom controls ─────────────────────────────────────────────────────────
+// ─── Bottom controls ──────────────────────────────────────────────────────────
 .inv-controls {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 5px;
-  background: $color-panel;
-  border: 1px solid $color-border;
-  border-radius: 4px;
-  padding: 6px 10px;
+  display: flex; flex-direction: row; align-items: center; gap: 5px;
+  background: $bg-panel;
+  border: 1px solid $border-base;
+  border-radius: 8px;
+  padding: 7px 12px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.6), inset 0 1px 0 #1e3d1e;
 }
 .inv-ctrl-btn {
-  width: 26px;
-  height: 26px;
-  font-size: 15px;
-  font-weight: 700;
-  color: $color-text;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid $color-border;
-  border-radius: 3px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 80ms;
-  &:hover { background: rgba(255,255,255,0.1); }
+  width: 28px; height: 28px; font-size: 16px; font-weight: 700;
+  color: $text-primary;
+  background: $bg-panel-2;
+  border: 1px solid $border-base;
+  border-radius: 5px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 100ms;
+  &:hover {
+    background: $accent-dim;
+    border-color: $border-hover;
+    color: $accent;
+    box-shadow: 0 0 8px $accent-glow-sm;
+  }
 }
 .inv-ctrl-amount {
-  width: 50px;
-  height: 26px;
-  text-align: center;
-  font-family: $font;
-  font-size: 13px;
-  font-weight: 700;
-  color: #fff;
-  background: rgba(0,0,0,0.35);
-  border: 1px solid $color-border;
-  border-radius: 3px;
-  outline: none;
-  &:focus { border-color: $color-accent; }
+  width: 52px; height: 28px; text-align: center;
+  font-family: $font; font-size: 13px; font-weight: 700;
+  color: $text-primary;
+  background: $bg-slot;
+  border: 1px solid $border-base;
+  border-radius: 5px; outline: none;
+  &:focus {
+    border-color: $accent;
+    box-shadow: 0 0 0 2px $accent-glow-sm;
+  }
 }
 .inv-ctrl-action-btn {
-  height: 26px;
-  padding: 0 12px;
-  font-family: $font;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.7px;
-  text-transform: uppercase;
-  color: $color-text;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid $color-border;
-  border-radius: 3px;
-  transition: 80ms;
-  &:hover { background: $color-accent-dim; border-color: rgba(79,195,247,0.3); color: $color-accent; }
+  height: 28px; padding: 0 14px;
+  font-family: $font; font-size: 10px; font-weight: 800;
+  letter-spacing: 1px; text-transform: uppercase;
+  color: $text-dim;
+  background: $bg-panel-2;
+  border: 1px solid $border-base;
+  border-radius: 5px;
+  transition: all 100ms;
+  &:hover {
+    background: $accent-dim;
+    border-color: $accent;
+    color: $accent;
+    box-shadow: 0 0 10px $accent-glow-sm, 0 0 20px rgba(57,255,20,0.08);
+    text-shadow: 0 0 8px $accent-glow;
+  }
 }
 .inv-ctrl-info {
-  &:hover { background: rgba(239,83,80,0.1) !important; border-color: rgba(239,83,80,0.35) !important; color: $color-red !important; }
+  &:hover {
+    background: $red-dim !important;
+    border-color: $red !important;
+    color: $red !important;
+    box-shadow: 0 0 10px rgba(255,59,59,0.25) !important;
+    text-shadow: 0 0 8px rgba(255,59,59,0.5) !important;
+  }
 }
 
-// ─── Outfit panel ────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+// OUTFIT PANEL
+// ═══════════════════════════════════════════════════════════════════════════════
+
 .outfit-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  background: $color-panel;
-  border: 1px solid $color-border;
-  border-radius: 4px;
-  padding: 8px;
+  display: flex; flex-direction: column; gap: 8px;
+  background: $bg-panel;
+  border: 1px solid $border-base;
+  border-radius: 8px; padding: 10px;
+  box-shadow:
+    0 0 0 1px #0a160a,
+    0 4px 24px rgba(0,0,0,0.7),
+    inset 0 1px 0 #1e3d1e;
 }
 .outfit-topbar {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: center;
-  padding-bottom: 5px;
-  border-bottom: 1px solid $color-border;
+  display: flex; flex-direction: row; justify-content: space-between; align-items: center;
+  padding-bottom: 8px;
+  border-bottom: 1px solid $border-base;
 }
 .outfit-title {
-  font-family: $font;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-  color: $color-text;
+  font-family: $font; font-size: 11px; font-weight: 800;
+  text-transform: uppercase; letter-spacing: 1.5px;
+  color: $accent;
+  text-shadow: 0 0 10px $accent-glow;
+  display: flex; align-items: center; gap: 5px;
 }
-.outfit-clear-btn {
-  font-family: $font;
-  font-size: 10px;
-  font-weight: 600;
-  text-transform: uppercase;
-  color: $color-text-dim;
-  background: transparent;
-  border: 1px solid rgba(255,255,255,0.07);
-  border-radius: 2px;
-  padding: 2px 6px;
-  transition: 80ms;
-  &:hover { color: $color-red; border-color: $color-red; background: rgba(239,83,80,0.07); }
+
+// Legend
+.outfit-legend { display: flex; flex-direction: row; align-items: center; gap: 8px; }
+.outfit-legend-item {
+  display: flex; align-items: center; gap: 4px;
+  font-family: $font; font-size: 8px; font-weight: 800;
+  letter-spacing: 0.8px; text-transform: uppercase;
 }
+.outfit-legend-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.outfit-legend-clothes {
+  color: $clothes;
+  .outfit-legend-dot { background: $clothes; box-shadow: 0 0 6px $clothes; }
+}
+.outfit-legend-props {
+  color: $props;
+  .outfit-legend-dot { background: $props; box-shadow: 0 0 6px $props; }
+}
+
 .outfit-body { display: flex; flex-direction: row; align-items: flex-start; gap: 6px; }
-.outfit-col { display: flex; flex-direction: column; gap: 3px; flex-shrink: 0; }
-.outfit-character { display: flex; flex-direction: column; align-items: center; gap: 5px; flex: 1; }
+.outfit-col { display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; }
+.outfit-character {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  flex: 0 0 auto; width: 180px;
+}
+
+// Character frame
 .outfit-char-frame {
-  $frame-h: ($cslot * 6) + (3px * 5);
-  width: 182px;
+  $frame-h: ($cslot * 6) + (4px * 5);
+  width: 100%;
   height: $frame-h;
-  background: rgba(255,255,255,0.015);
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  overflow: hidden;
-  &::after {
+  background: $bg-slot;
+  border: 1px solid $border-base;
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  position: relative; overflow: hidden;
+  &::before {
     content: '';
-    position: absolute;
-    left: 0; right: 0;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(79,195,247,0.15), transparent);
-    animation: scanline 3s linear infinite;
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg,
+      rgba(57,255,20,0.03) 0%,
+      transparent 40%,
+      transparent 60%,
+      rgba(57,255,20,0.03) 100%
+    );
+    pointer-events: none;
+  }
+  &::after {
+    content: ''; position: absolute; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, $accent, transparent);
+    opacity: 0.25;
+    animation: scanline 4s linear infinite;
   }
 }
 @keyframes scanline {
   0%   { top: 0%; opacity: 0; }
-  10%  { opacity: 1; }
-  90%  { opacity: 1; }
+  8%   { opacity: 0.3; }
+  92%  { opacity: 0.3; }
   100% { top: 100%; opacity: 0; }
 }
-.outfit-char-svg { width: 75px; height: auto; opacity: 0.45; }
-.outfit-props-row {
-  display: flex;
-  flex-direction: row;
-  gap: 3px;
-  width: 182px;
-  flex-shrink: 0;
-  .cslot { flex: 1; width: auto; min-width: 0; }
+.outfit-char-svg {
+  width: 48px; height: auto; opacity: 0.2;
+  filter: drop-shadow(0 0 8px $accent);
 }
 
-// ─── Clothing slot ────────────────────────────────────────────────────────────
+.outfit-props-label {
+  width: 100%; padding: 3px 2px 2px;
+  border-top: 1px solid $props-border;
+  display: flex; align-items: center;
+}
+.outfit-props-row {
+  display: flex; flex-direction: row; gap: 4px;
+  width: 100%; flex-shrink: 0;
+  .cslot {
+    flex: 1; width: 0; height: $cprops; min-width: 0;
+    .cslot-icon  { font-size: 20px; }
+    .cslot-label { font-size: 7px; }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CLOTHING SLOTS
+// ═══════════════════════════════════════════════════════════════════════════════
 .cslot {
-  width: $cslot;
-  height: $cslot;
+  width: $cslot; height: $cslot;
   position: relative;
-  border-radius: 3px;
-  background-color: rgba(255,255,255,0.025);
+  border-radius: 6px;
   background-repeat: no-repeat;
   background-position: center;
-  background-size: 55%;
-  border: 1px solid $color-border;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  background-size: 58%;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
   overflow: hidden;
-  transition: 80ms;
+  transition: all 120ms;
   flex-shrink: 0;
-  &:hover { border-color: $color-border-h; background-color: rgba(255,255,255,0.04); }
-}
-.cslot-equipped { border-color: rgba(79,195,247,0.26) !important; background-color: rgba(79,195,247,0.05) !important; }
-.cslot-accept { border: 1px dashed $color-accent !important; background-color: $color-accent-dim !important; }
-.cslot-reject { border: 1px dashed $color-red !important; background-color: rgba(239,83,80,0.09) !important; }
-.cslot-icon { font-size: 14px; line-height: 1; filter: opacity(0.4); }
-.cslot-icon-sm { position: absolute; top: 2px; left: 3px; font-size: 9px; line-height: 1; }
-.cslot-dtbadge {
-  position: absolute; top: 2px; right: 2px;
-  font-family: $font; font-size: 7px; font-weight: 700;
-  color: rgba(79,195,247,0.6); background: rgba(0,0,0,0.55);
-  border-radius: 2px; padding: 1px 2px; line-height: 1.2;
-}
-.cslot-label {
-  font-family: $font; font-size: 7px; font-weight: 600;
-  color: $color-text-dim; text-transform: uppercase; text-align: center;
-  line-height: 1.2; padding: 0 2px;
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-}
-.cslot-eq-label {
-  position: absolute; bottom: 0; left: 0; right: 0;
-  font-family: $font; font-size: 7px; font-weight: 600; color: $color-text;
-  text-transform: uppercase; text-align: center; white-space: nowrap;
-  overflow: hidden; text-overflow: ellipsis;
-  background: rgba(0,0,0,0.65); padding: 2px;
-}
-.cslot-unequip {
-  position: absolute; top: 2px; right: 2px;
-  width: 12px; height: 12px; font-size: 7px;
-  display: flex; align-items: center; justify-content: center;
-  background: rgba(239,83,80,0.85); color: #fff;
-  border: none; border-radius: 2px; padding: 0; z-index: 10; transition: 80ms;
-  &:hover { background: $color-red; transform: scale(1.12) !important; }
-}
-.cslot-hint {
-  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-  font-size: 18px; color: rgba(255,255,255,0.45); pointer-events: none;
 }
 
-// ─── Tooltip ─────────────────────────────────────────────────────────────────
+// CLO — green
+.cslot-clothes-type {
+  background-color: $clothes-dim;
+  border: 1px solid $clothes-border;
+  &:hover {
+    border-color: $clothes;
+    background-color: #1a2e1a;
+    box-shadow: 0 0 12px rgba(57,255,20,0.2), inset 0 0 8px rgba(57,255,20,0.07);
+  }
+  &.cslot-equipped {
+    border-color: $accent !important;
+    background-color: #1a2e1a !important;
+    box-shadow: 0 0 14px $accent-glow-sm, inset 0 0 10px rgba(57,255,20,0.08) !important;
+  }
+}
+
+// PROP — amber
+.cslot-props-type {
+  background-color: $props-dim;
+  border: 1px solid $props-border;
+  &:hover {
+    border-color: $props;
+    background-color: #251e08;
+    box-shadow: 0 0 12px rgba(240,192,64,0.2), inset 0 0 8px rgba(240,192,64,0.07);
+  }
+  &.cslot-equipped {
+    border-color: $props !important;
+    background-color: #251e08 !important;
+    box-shadow: 0 0 14px rgba(240,192,64,0.3), inset 0 0 10px rgba(240,192,64,0.08) !important;
+  }
+}
+
+.cslot-accept {
+  border: 1px dashed $accent !important;
+  background-color: #152015 !important;
+  box-shadow: 0 0 12px $accent-glow !important;
+}
+.cslot-reject {
+  border: 1px dashed $red !important;
+  background-color: $red-dim !important;
+}
+
+.cslot-icon { font-size: 18px; line-height: 1; filter: opacity(0.5); pointer-events: none; }
+.cslot-icon-sm { position: absolute; top: 3px; left: 4px; font-size: 10px; line-height: 1; pointer-events: none; }
+
+.cslot-cat-badge {
+  position: absolute; top: 3px; right: 3px;
+  font-family: $font; font-size: 6px; font-weight: 900;
+  letter-spacing: 0.5px; border-radius: 3px; padding: 1px 3px;
+  line-height: 1.4; text-transform: uppercase; pointer-events: none;
+}
+.cslot-cat-clothes {
+  color: $accent;
+  background: #0e2a0e;
+  border: 1px solid $clothes-border;
+}
+.cslot-cat-props {
+  color: $props;
+  background: #1f1a08;
+  border: 1px solid $props-border;
+}
+
+.cslot-label {
+  font-family: $font; font-size: 7px; font-weight: 700;
+  color: $text-dim; text-transform: uppercase; text-align: center;
+  line-height: 1.3; padding: 0 3px; margin-top: 3px;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden; pointer-events: none;
+}
+
+.inventory-slot-label-box {
+  background: linear-gradient(transparent, rgba(0,8,0,0.92));
+  text-align: center;
+  border-bottom-left-radius: 5px;
+  border-bottom-right-radius: 5px;
+}
+
+.cslot-unequip {
+  position: absolute; top: 3px; right: 3px;
+  width: 14px; height: 14px; font-size: 7px;
+  display: flex; align-items: center; justify-content: center;
+  background: $red; color: #fff;
+  border: none; border-radius: 3px; padding: 0; z-index: 10;
+  transition: all 100ms; line-height: 1;
+  &:hover {
+    background: #ff6060;
+    transform: scale(1.1) !important;
+    box-shadow: 0 0 8px rgba(255,59,59,0.5);
+  }
+}
+.cslot-hint {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; color: $text-primary;
+  pointer-events: none;
+  background: rgba(0,8,0,0.4);
+}
+
+// ─── Tooltip ──────────────────────────────────────────────────────────────────
 .tooltip-wrapper {
   pointer-events: none;
-  display: flex; background: $color-panel; border: 1px solid $color-border;
-  width: 185px; padding: 8px; flex-direction: column; min-width: 185px;
-  color: $color-text; font-family: $font; border-radius: 4px;
-  box-shadow: 0 5px 18px rgba(0,0,0,0.65); z-index: 999;
+  display: flex; background: $bg-panel-2; border: 1px solid $border-base;
+  width: 190px; padding: 10px; flex-direction: column; min-width: 190px;
+  color: $text-primary; font-family: $font; border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.8), 0 0 0 1px #0a160a;
+  z-index: 999;
   p { font-size: 11px; }
 }
 .tooltip-header-wrapper {
   display: flex; flex-direction: row; justify-content: space-between; align-items: center;
-  p { font-size: 12px; font-weight: 600; }
+  p { font-size: 12px; font-weight: 700; color: $accent; text-shadow: 0 0 8px $accent-glow-sm; }
 }
 .tooltip-crafting-duration {
   display: flex; flex-direction: row; align-items: center;
   svg { padding-right: 3px; } p { font-size: 11px; }
 }
-.tooltip-description { padding-top: 4px; }
+.tooltip-description { padding-top: 5px; }
 .tooltip-markdown > p { margin: 0; }
-.tooltip-ingredients { padding-top: 4px; }
+.tooltip-ingredients { padding-top: 5px; }
 .tooltip-ingredient {
   display: flex; flex-direction: row; align-items: center;
-  img { width: 24px; height: 24px; padding-right: 4px; }
+  img { width: 24px; height: 24px; padding-right: 5px; }
 }
 
 // ─── Context menu ─────────────────────────────────────────────────────────────
 .context-menu-list {
-  min-width: 155px; background-color: $color-panel; color: $color-text;
-  padding: 3px; border: 1px solid $color-border; border-radius: 4px; outline: none;
-  display: flex; flex-direction: column; box-shadow: 0 6px 18px rgba(0,0,0,0.7);
+  min-width: 160px; background: $bg-panel-2; color: $text-primary;
+  padding: 4px; border: 1px solid $border-base; border-radius: 8px; outline: none;
+  display: flex; flex-direction: column;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.8), 0 0 0 1px #0a160a;
 }
 .context-menu-item {
-  padding: 7px 10px; border-radius: 2px; background-color: transparent;
-  outline: none; border: none; color: $color-text;
+  padding: 8px 12px; border-radius: 5px; background: transparent;
+  outline: none; border: none; color: $text-dim;
   display: flex; justify-content: space-between; align-items: center;
-  font-family: $font; font-size: 12px; font-weight: 500; cursor: pointer;
-  &:hover { background-color: $color-accent-dim; color: $color-accent; }
+  font-family: $font; font-size: 12px; font-weight: 600; cursor: pointer;
+  transition: all 80ms;
+  &:hover {
+    background: $accent-dim;
+    color: $accent;
+    text-shadow: 0 0 8px $accent-glow-sm;
+    border-left: 2px solid $accent;
+    padding-left: 10px;
+  }
   &:active { transform: none; }
 }
 
-// ─── Useful controls ─────────────────────────────────────────────────────────
+// Equip button — green highlight
+.context-menu-item-equip {
+  color: $accent !important;
+  font-weight: 800 !important;
+  &:hover {
+    background: $accent-dim !important;
+    border-left-color: $accent !important;
+    text-shadow: 0 0 10px $accent-glow !important;
+    box-shadow: inset 0 0 12px rgba(57,255,20,0.08) !important;
+  }
+}
+
+// Unequip button — orange/amber highlight
+.context-menu-item-unequip {
+  color: #f0a030 !important;
+  font-weight: 800 !important;
+  &:hover {
+    background: rgba(240,160,48,0.12) !important;
+    border-left: 2px solid #f0a030 !important;
+    padding-left: 10px !important;
+    text-shadow: 0 0 8px rgba(240,160,48,0.5) !important;
+  }
+}
+
+// ─── Useful controls ──────────────────────────────────────────────────────────
 .useful-controls-button {
   position: absolute !important; bottom: 18px; right: 18px;
-  border: 1px solid $color-border; color: $color-text;
-  width: 34px; height: 34px; display: flex; justify-content: center; align-items: center;
-  fill: $color-text; border-radius: 4px !important; background-color: $color-panel !important;
-  transition: 80ms !important;
-  &:hover { border-color: $color-accent !important; fill: $color-accent !important; }
+  border: 1px solid $border-base;
+  width: 36px; height: 36px;
+  display: flex; justify-content: center; align-items: center;
+  fill: $text-dim; border-radius: 8px !important;
+  background-color: $bg-panel !important;
+  transition: all 100ms !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  &:hover {
+    border-color: $accent !important;
+    fill: $accent !important;
+    box-shadow: 0 0 12px $accent-glow-sm !important;
+  }
 }
 .useful-controls-dialog {
-  background-color: $color-panel; border: 1px solid $color-border;
+  background: $bg-panel-2; border: 1px solid $border-base;
   position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-  color: $color-text; width: 360px; display: flex; flex-direction: column;
-  padding: 14px; border-radius: 4px; gap: 12px; box-shadow: 0 10px 36px rgba(0,0,0,0.7);
+  color: $text-primary; width: 370px; display: flex; flex-direction: column;
+  padding: 16px; border-radius: 10px; gap: 14px;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.9), 0 0 0 1px #0a160a;
 }
-.useful-controls-dialog-overlay { background-color: rgba(0,0,0,0.5); }
+.useful-controls-dialog-overlay { background-color: rgba(0,5,0,0.7); }
 .useful-controls-dialog-title {
   display: flex; width: 100%; justify-content: space-between; align-items: center;
-  font-size: 13px; font-weight: 700; letter-spacing: 0.7px; text-transform: uppercase;
+  font-size: 12px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;
+  color: $accent; text-shadow: 0 0 10px $accent-glow-sm;
 }
 .useful-controls-dialog-close {
-  width: 22px; height: 22px; padding: 5px;
+  width: 24px; height: 24px; padding: 5px;
   display: flex; justify-content: center; align-items: center;
-  border-radius: 3px; fill: $color-text; cursor: pointer;
-  &:hover { background-color: rgba(239,83,80,0.1); fill: $color-red; }
+  border-radius: 5px; fill: $text-dim; cursor: pointer; transition: all 100ms;
+  &:hover { background: $red-dim; fill: $red; }
 }
-.useful-controls-content-wrapper { display: flex; flex-direction: column; gap: 12px; font-family: $font; font-size: 12px; }
+.useful-controls-content-wrapper {
+  display: flex; flex-direction: column; gap: 12px;
+  font-family: $font; font-size: 12px; color: $text-dim;
+}
 
-// ─── Hotbar ──────────────────────────────────────────────────────────────────
+// ─── Hotbar ───────────────────────────────────────────────────────────────────
 .hotbar-container {
   display: flex; align-items: center; gap: 3px; justify-content: center;
   width: 100%; position: absolute; bottom: 22px;
 }
-.hotbar-item-slot { @extend .inventory-slot; width: $slot; height: $slot; border-radius: 3px; }
+.hotbar-item-slot { @extend .inventory-slot; width: $slot; height: $slot; border-radius: 5px; }
 .hotbar-slot-header-wrapper { display: flex; flex-direction: row; justify-content: space-between; }
 
 // ─── Item notifications ───────────────────────────────────────────────────────
@@ -476,33 +682,33 @@ button:active { transform: translateY(1px); }
   margin-left: calc(50% - #{$slot} / 2); transform: translate(-50%);
 }
 .item-notification-action-box {
-  width: 100%; color: $color-text; background-color: $color-accent-dim;
+  width: 100%; color: #000; background-color: $accent;
   text-transform: uppercase; text-align: center;
-  border-top-left-radius: 2px; border-top-right-radius: 2px; font-family: $font;
-  p { font-size: 9px; padding: 2px; font-weight: 700; }
+  border-top-left-radius: 4px; border-top-right-radius: 4px; font-family: $font;
+  p { font-size: 9px; padding: 2px; font-weight: 800; }
 }
 .item-notification-item-box { @extend .inventory-slot; height: $slot; width: $slot; }
 
-// ─── Drag preview ────────────────────────────────────────────────────────────
+// ─── Drag preview ─────────────────────────────────────────────────────────────
 .item-drag-preview {
   width: 80px; height: 80px; z-index: 999; position: fixed; pointer-events: none;
   top: 0; left: 0; background-repeat: no-repeat; background-position: center;
   background-size: 60px; image-rendering: -webkit-optimize-contrast;
-  filter: drop-shadow(0 4px 10px rgba(0,0,0,0.7));
+  filter: drop-shadow(0 0 8px $accent) drop-shadow(0 6px 14px rgba(0,0,0,0.9));
 }
 
-// ─── InventoryControl (legacy) ───────────────────────────────────────────────
+// ─── InventoryControl (legacy) ────────────────────────────────────────────────
 .inventory-control { display: flex; justify-content: center; align-items: center; padding: 6px 0; }
 .inventory-control-wrapper { display: flex; flex-direction: row; align-items: center; gap: 6px; }
 .inventory-control-input {
-  width: 50px; height: 26px; text-align: center; font-family: $font;
-  font-size: 13px; font-weight: 700; color: #fff; background: rgba(0,0,0,0.35);
-  border: 1px solid $color-border; border-radius: 3px; outline: none;
-  &:focus { border-color: $color-accent; }
+  width: 52px; height: 28px; text-align: center; font-family: $font;
+  font-size: 13px; font-weight: 700; color: $text-primary;
+  background: $bg-slot; border: 1px solid $border-base; border-radius: 5px; outline: none;
+  &:focus { border-color: $accent; box-shadow: 0 0 0 2px $accent-glow-sm; }
 }
 .inventory-control-button { @extend .inv-ctrl-action-btn; }
 
-// ─── Transitions ─────────────────────────────────────────────────────────────
+// ─── Transitions ──────────────────────────────────────────────────────────────
 .transition-fade-enter { opacity: 0; }
 .transition-fade-enter-active { opacity: 1; transition: opacity 200ms; }
 .transition-fade-exit { opacity: 1; }

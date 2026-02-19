@@ -26,16 +26,13 @@ export const setupInventoryReducer: CaseReducer<
     } else if (leftInventory.baseSlots != null) {
       // Server sudah kirim baseSlots secara eksplisit — pakai itu
       baseSlots = leftInventory.baseSlots;
-    } else if (leftInventory.slots > CLOTHING_SLOT_COUNT) {
-      // Server kirim total slots (base + clothing) — hitung baseSlots
-      // Asumsi: kalau slots > 17, kemungkinan sudah include clothing slots
-      // Tapi ini tidak reliable, lebih baik server selalu kirim baseSlots
-      baseSlots = leftInventory.slots - CLOTHING_SLOT_COUNT;
     } else {
+      // Server kirim slots = jumlah slot inventory BIASA (misal 20)
+      // Kita TIDAK kurangi apapun — baseSlots = slots itu sendiri
       baseSlots = leftInventory.slots;
     }
 
-    // Total array selalu base + clothing agar slot clothing bisa disimpan
+    // Total array = baseSlots + 17 clothing slots
     const totalSlots = isPlayer ? baseSlots + CLOTHING_SLOT_COUNT : baseSlots;
 
     state.leftInventory = {
