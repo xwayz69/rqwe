@@ -6,7 +6,7 @@ import WeightBar from '../utils/WeightBar';
 import { onDrop } from '../../dnd/onDrop';
 import { onBuy } from '../../dnd/onBuy';
 import { Items } from '../../store/items';
-import { canCraftItem, canPurchaseItem, getItemUrl, isSlotWithItem, itemMatchesClothingSlot } from '../../helpers';
+import { canCraftItem, canPurchaseItem, getItemUrl, isSlotWithItem } from '../../helpers';
 import { onUse } from '../../dnd/onUse';
 import { Locale } from '../../store/locale';
 import { onCraft } from '../../dnd/onCraft';
@@ -15,89 +15,47 @@ import { ItemsPayload } from '../../reducers/refreshSlots';
 import { closeTooltip, openTooltip } from '../../store/tooltip';
 import { openContextMenu } from '../../store/contextMenu';
 import { useMergeRefs } from '@floating-ui/react';
-import { selectLeftInventory } from '../../store/inventory';
-
-const SLOT_TYPE_NORMAL   = 'SLOT';
-const SLOT_TYPE_CLOTHING = 'SLOT_CLOTHING';
-
-// Item placeholder yang dipakai server untuk reserve clothing slot
-// Slot dengan item ini diperlakukan sebagai KOSONG secara visual
-const RESERVED_ITEM = 'clothing_reserved';
 
 interface SlotProps {
   inventoryId: Inventory['id'];
   inventoryType: Inventory['type'];
   inventoryGroups: Inventory['groups'];
   item: Slot;
-  clothingSlotInfo?: { icon: string; label: string };
 }
 
 const InventorySlot: React.ForwardRefRenderFunction<HTMLDivElement, SlotProps> = (
-  { item, inventoryId, inventoryType, inventoryGroups, clothingSlotInfo },
+  { item, inventoryId, inventoryType, inventoryGroups },
   ref
 ) => {
-  const manager       = useDragDropManager();
-  const dispatch      = useAppDispatch();
-  const timerRef      = useRef<number | null>(null);
-  const leftInventory = useAppSelector(selectLeftInventory);
+  const manager  = useDragDropManager();
+  const dispatch = useAppDispatch();
+  const timerRef = useRef<number | null>(null);
 
-  const isClothingSlot  = !!clothingSlotInfo;
-  const baseSlots        = leftInventory.baseSlots ?? leftInventory.slots;
-  const clothingSlotIndex = isClothingSlot ? item.slot - 1 - baseSlots : -1;
-
-  // Treat item clothing_reserved sebagai slot kosong secara visual
-  const isReservedItem = (item as SlotWithItem)?.name === RESERVED_ITEM;
-  const visuallyEmpty  = !isSlotWithItem(item) || isReservedItem;
-console.log('slot', item.slot, 'name:', (item as any).name);
-  const dragType = isClothingSlot ? SLOT_TYPE_CLOTHING : SLOT_TYPE_NORMAL;
   const canDrag = useCallback(() => {
-    if (isReservedItem) return false; // placeholder tidak bisa di-drag
-    return canPurchaseItem(item, { type: inventoryType, groups: inventoryGroups }) && canCraftItem(item, inventoryType);
-  }, [item, inventoryType, inventoryGroups, isReservedItem]);
+    return canPurchaseItem(item, { type: inventoryType, groups: inventoryGroups }) &&
+           canCraftItem(item, inventoryType);
+  }, [item, inventoryType, inventoryGroups]);
 
   const [{ isDragging }, drag] = useDrag<DragSource, void, { isDragging: boolean }>(
     () => ({
-      type: dragType,
+      type: 'SLOT',
       collect: (monitor) => ({ isDragging: monitor.isDragging() }),
-      item: () => {
-        if (isReservedItem) return null;
-        return isSlotWithItem(item, inventoryType !== InventoryType.SHOP)
+      item: () =>
+        isSlotWithItem(item, inventoryType !== InventoryType.SHOP)
           ? {
               inventory: inventoryType,
               item: { name: item.name, slot: item.slot },
               image: item?.name && `url(${getItemUrl(item) || 'none'}`,
             }
-          : null;
-      },
+          : null,
       canDrag,
     }),
-    [inventoryType, item, dragType, isReservedItem]
+    [inventoryType, item]
   );
 
-  // ── Clothing slot: hanya terima SLOT_NORMAL yang cocok ──────────────────────
-  const [clothingDropState, clothingDrop] = useDrop<DragSource, void, { isOver: boolean; canDrop: boolean }>(
+  const [{ isOver, canDrop }, drop] = useDrop<DragSource, void, { isOver: boolean; canDrop: boolean }>(
     () => ({
-      accept: SLOT_TYPE_NORMAL,
-      collect: (monitor) => ({ isOver: monitor.isOver(), canDrop: monitor.canDrop() }),
-      canDrop: (source) => {
-        if (source.inventory !== InventoryType.PLAYER) return false;
-        if (source.item.slot > baseSlots) return false;
-        const srcItem = leftInventory.items[source.item.slot - 1];
-        if (!isSlotWithItem(srcItem)) return false;
-        return itemMatchesClothingSlot(srcItem, clothingSlotIndex);
-      },
-      drop: (source) => {
-        dispatch(closeTooltip());
-        onDrop(source, { inventory: inventoryType, item: { slot: item.slot } });
-      },
-    }),
-    [inventoryType, item, clothingSlotIndex, baseSlots, leftInventory]
-  );
-
-  // ── Slot biasa: hanya terima SLOT_NORMAL ────────────────────────────────────
-  const [normalDropState, normalDrop] = useDrop<DragSource, void, { isOver: boolean; canDrop: boolean }>(
-    () => ({
-      accept: SLOT_TYPE_NORMAL,
+      accept: 'SLOT',
       collect: (monitor) => ({ isOver: monitor.isOver(), canDrop: monitor.canDrop() }),
       drop: (source) => {
         dispatch(closeTooltip());
@@ -114,12 +72,9 @@ console.log('slot', item.slot, 'name:', (item as any).name);
         }
       },
       canDrop: (source: any) => {
+        if (source.fromClothingSlot) return false; // block drop dari clothing panel ke inv biasa lewat sini
         if (source.item.slot === item.slot && source.inventory === inventoryType) return false;
         if (inventoryType === InventoryType.SHOP || inventoryType === InventoryType.CRAFTING) return false;
-        // Kalau drag dari clothing slot (CharacterOutfit), hanya boleh ke slot kosong
-        // Slot clothing_reserved dianggap kosong
-        const targetIsEmpty = !isSlotWithItem(item) || isReservedItem;
-        if (source.fromClothingSlot && !targetIsEmpty) return false;
         return true;
       },
     }),
@@ -136,24 +91,19 @@ console.log('slot', item.slot, 'name:', (item as any).name);
     manager.dispatch({ type: 'dnd-core/END_DRAG' });
   });
 
-  const connectRef = isClothingSlot
-    ? (el: HTMLDivElement) => drag(clothingDrop(el))
-    : (el: HTMLDivElement) => drag(normalDrop(el));
-
+  const connectRef = (el: HTMLDivElement | null) => {
+    drag(el);
+    drop(el);
+  };
   const refs = useMergeRefs([connectRef, ref]);
-
-  const dropState     = isClothingSlot ? clothingDropState : normalDropState;
-  const { isOver, canDrop } = dropState;
 
   const handleContext = (event: React.MouseEvent<HTMLDivElement>) => {
     event.preventDefault();
-    if (isReservedItem) return; // jangan buka context menu untuk reserved
     if (inventoryType !== 'player' || !isSlotWithItem(item)) return;
     dispatch(openContextMenu({ item, coords: { x: event.clientX, y: event.clientY } }));
   };
 
   const handleClick = (event: React.MouseEvent<HTMLDivElement>) => {
-    if (isReservedItem) return;
     dispatch(closeTooltip());
     if (timerRef.current) clearTimeout(timerRef.current);
     if (event.ctrlKey && isSlotWithItem(item) && inventoryType !== 'shop' && inventoryType !== 'crafting') {
@@ -169,46 +119,24 @@ console.log('slot', item.slot, 'name:', (item as any).name);
       : '1px dashed rgba(231, 76, 60, 0.8)'
     : undefined;
 
-  // Background image — reserved item tidak tampilkan gambar
-  const bgImage = visuallyEmpty
-    ? 'none'
-    : `url(${getItemUrl(item as SlotWithItem)})`;
-
   return (
     <div
       ref={refs}
       onContextMenu={handleContext}
       onClick={handleClick}
-      className={`inventory-slot${isClothingSlot ? ' inventory-slot--clothing' : ''}`}
+      className="inventory-slot"
       style={{
         filter:
-          !isReservedItem &&
           (!canPurchaseItem(item, { type: inventoryType, groups: inventoryGroups }) ||
             !canCraftItem(item, inventoryType))
             ? 'brightness(80%) grayscale(100%)'
             : undefined,
         opacity: isDragging ? 0.4 : 1.0,
-        backgroundImage: bgImage,
+        backgroundImage: isSlotWithItem(item) ? `url(${getItemUrl(item as SlotWithItem)})` : undefined,
         border: borderOverride,
       }}
     >
-      {/* Badge clothing slot kosong / reserved — icon besar + label di tengah */}
-      {isClothingSlot && visuallyEmpty && (
-        <div className="clothing-slot-badge">
-          <span className="clothing-slot-badge-icon">{clothingSlotInfo.icon}</span>
-          <span className="clothing-slot-badge-label">{clothingSlotInfo.label}</span>
-        </div>
-      )}
-
-      {/* Badge clothing slot ada item asli — icon kecil pojok kiri atas */}
-      {isClothingSlot && !visuallyEmpty && (
-        <div className="clothing-slot-badge clothing-slot-badge--filled">
-          <span className="clothing-slot-badge-icon">{clothingSlotInfo.icon}</span>
-        </div>
-      )}
-
-      {/* Render item wrapper HANYA jika bukan reserved */}
-      {isSlotWithItem(item) && !isReservedItem && (
+      {isSlotWithItem(item) && (
         <div
           className="item-slot-wrapper"
           onMouseEnter={() => {

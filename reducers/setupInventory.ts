@@ -3,9 +3,6 @@ import { getItemData, itemDurability } from '../helpers';
 import { Items } from '../store/items';
 import { Inventory, State } from '../typings';
 
-const CLOTHING_SLOT_COUNT = 17; // 12 clothes + 5 props
-const RESERVED_ITEM = 'clothing_reserved';
-
 export const setupInventoryReducer: CaseReducer<
   State,
   PayloadAction<{
@@ -17,25 +14,12 @@ export const setupInventoryReducer: CaseReducer<
   const curTime = Math.floor(Date.now() / 1000);
 
   if (leftInventory) {
-    const isPlayer = leftInventory.type === 'player';
-
-    let baseSlots: number;
-
-    if (!isPlayer) {
-      baseSlots = leftInventory.slots;
-    } else if (leftInventory.baseSlots != null) {
-      baseSlots = leftInventory.baseSlots;
-    } else if (leftInventory.slots > CLOTHING_SLOT_COUNT) {
-      baseSlots = leftInventory.slots - CLOTHING_SLOT_COUNT;
-    } else {
-      baseSlots = leftInventory.slots;
-    }
-
-    const totalSlots = isPlayer ? baseSlots + CLOTHING_SLOT_COUNT : baseSlots;
+    // Left inventory = pure base slots, tidak ada clothing slots tambahan
+    const totalSlots = leftInventory.slots;
 
     state.leftInventory = {
       ...leftInventory,
-      baseSlots: isPlayer ? baseSlots : undefined,
+      baseSlots: undefined, // tidak diperlukan lagi
       slots: totalSlots,
       items: Array.from(Array(totalSlots), (_, index) => {
         const slotNum = index + 1;
@@ -44,11 +28,6 @@ export const setupInventoryReducer: CaseReducer<
         };
 
         if (!item.name) return item;
-
-        // DEBUG: clothing_reserved ditampilkan di base slots (temporary)
-        // if (item.name === RESERVED_ITEM && slotNum <= baseSlots) {
-        //   return { slot: slotNum };
-        // }
 
         if (typeof Items[item.name] === 'undefined') {
           getItemData(item.name);

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import useNuiEvent from '../../hooks/useNuiEvent';
 import InventoryHotbar from './InventoryHotbar';
 import { useAppDispatch } from '../../store';
-import { refreshSlots, setAdditionalMetadata, setupInventory, setItemAmount, selectItemAmount, setBaseSlots } from '../../store/inventory';
+import { refreshSlots, setAdditionalMetadata, setupInventory, setItemAmount, selectItemAmount, setupClothingInventory } from '../../store/inventory';
 import { useExitListener } from '../../hooks/useExitListener';
 import type { Inventory as InventoryProps } from '../../typings';
 import RightInventory from './RightInventory';
@@ -13,8 +13,8 @@ import InventoryContext from './InventoryContext';
 import { closeContextMenu } from '../../store/contextMenu';
 import Fade from '../utils/transitions/Fade';
 import CharacterOutfit from './CharacterOutfit';
-import { setClothingState } from '../../store/clothing';
 import { ClothingState } from '../../typings/clothing';
+import { setClothingState } from '../../store/clothing';
 import { fetchNui } from '../../utils/fetchNui';
 import { Locale } from '../../store/locale';
 import { useAppSelector } from '../../store';
@@ -73,9 +73,9 @@ const InventoryRoot: React.FC = () => {
   useNuiEvent<ClothingState>('syncClothing', (data) => {
     dispatch(setClothingState(data));
   });
-  // Terima baseSlots dari server via cl_clothing.lua
-  useNuiEvent<number>('setBaseSlots', (slots) => {
-    dispatch(setBaseSlots(slots));
+  // Terima clothing inventory (stash terpisah) dari server
+  useNuiEvent<any>('setupClothingInventory', (data) => {
+    dispatch(setupClothingInventory(data));
   });
 
   return (

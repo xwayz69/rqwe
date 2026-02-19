@@ -13,8 +13,6 @@ interface Payload {
   slotsData?: { inventoryId: string; slots: number };
 }
 
-const RESERVED_ITEM = 'clothing_reserved';
-
 export const refreshSlotsReducer: CaseReducer<State, PayloadAction<Payload>> = (state, action) => {
   if (action.payload.items) {
     if (!Array.isArray(action.payload.items)) action.payload.items = [action.payload.items];
@@ -31,18 +29,13 @@ export const refreshSlotsReducer: CaseReducer<State, PayloadAction<Payload>> = (
 
         const slotNum = data.item.slot;
 
-        // Hapus clothing_reserved HANYA dari base slots — clothing slots boleh punya reserved
-        const baseSlots = targetInventory.baseSlots ?? targetInventory.slots;
-        if (data.item.name === RESERVED_ITEM && slotNum <= baseSlots) {
-          targetInventory.items[slotNum - 1] = { slot: slotNum };
-          return;
-        }
+        // Pastikan slot tidak melebihi ukuran inventory
+        if (slotNum < 1 || slotNum > targetInventory.slots) return;
 
         data.item.durability = itemDurability(data.item.metadata, curTime);
         targetInventory.items[slotNum - 1] = data.item;
       });
 
-    // Janky workaround to force a state rerender for crafting inventory
     if (state.rightInventory.type === InventoryType.CRAFTING) {
       state.rightInventory = { ...state.rightInventory };
     }
@@ -50,11 +43,9 @@ export const refreshSlotsReducer: CaseReducer<State, PayloadAction<Payload>> = (
 
   if (action.payload.itemCount) {
     const items = Object.entries(action.payload.itemCount);
-
     for (let i = 0; i < items.length; i++) {
       const item  = items[i][0];
       const count = items[i][1];
-
       if (Items[item]!) {
         Items[item]!.count += count;
       } else console.log(`Item data for ${item} is undefined`);
@@ -62,32 +53,20 @@ export const refreshSlotsReducer: CaseReducer<State, PayloadAction<Payload>> = (
   }
 
   if (action.payload.weightData) {
-    const inventoryId        = action.payload.weightData.inventoryId;
-    const inventoryMaxWeight = action.payload.weightData.maxWeight;
+    const { inventoryId, maxWeight } = action.payload.weightData;
     const inv =
-      inventoryId === state.leftInventory.id
-        ? 'leftInventory'
-        : inventoryId === state.rightInventory.id
-        ? 'rightInventory'
-        : null;
-
+      inventoryId === state.leftInventory.id ? 'leftInventory' :
+      inventoryId === state.rightInventory.id ? 'rightInventory' : null;
     if (!inv) return;
-    state[inv].maxWeight = inventoryMaxWeight;
+    state[inv].maxWeight = maxWeight;
   }
 
   if (action.payload.slotsData) {
-    const { inventoryId } = action.payload.slotsData;
-    const { slots }       = action.payload.slotsData;
-
+    const { inventoryId, slots } = action.payload.slotsData;
     const inv =
-      inventoryId === state.leftInventory.id
-        ? 'leftInventory'
-        : inventoryId === state.rightInventory.id
-        ? 'rightInventory'
-        : null;
-
+      inventoryId === state.leftInventory.id ? 'leftInventory' :
+      inventoryId === state.rightInventory.id ? 'rightInventory' : null;
     if (!inv) return;
-
     state[inv].slots = slots;
     inventorySlice.caseReducers.setupInventory(state, {
       type: 'setupInventory',

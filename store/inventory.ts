@@ -7,9 +7,7 @@ import {
   stackSlotsReducer,
   swapSlotsReducer,
 } from '../reducers';
-import { State } from '../typings';
-
-const CLOTHING_SLOT_COUNT = 17;
+import { Inventory, State } from '../typings';
 
 const initialState: State = {
   leftInventory: {
@@ -26,6 +24,7 @@ const initialState: State = {
     maxWeight: 0,
     items: [],
   },
+  clothingInventory: null,
   additionalMetadata: new Array(),
   itemAmount: 0,
   shiftPressed: false,
@@ -60,38 +59,30 @@ export const inventorySlice = createSlice({
       if (!container) return;
       container.weight = action.payload;
     },
-
-    // Set baseSlots untuk left inventory (player)
-    // Dipanggil saat server kirim ox_clothing:setBaseSlots via NUI
-    // Rebuild items array agar clothing slots ada di posisi yang benar
-    setBaseSlots: (state, action: PayloadAction<number>) => {
-      const inv = state.leftInventory;
-      if (inv.type !== 'player') return;
-
-      const newBase   = action.payload;
-      const oldBase   = inv.baseSlots ?? inv.slots;
-      const totalSlots = newBase + CLOTHING_SLOT_COUNT;
-
-      // Kalau baseSlots sama, tidak perlu rebuild
-      if (inv.baseSlots === newBase && inv.items.length === totalSlots) return;
-
-      // Simpan items yang sudah ada (pertahankan data clothing slot jika ada)
-      const existingItems = inv.items;
-
-      // Rebuild array dengan ukuran yang benar
-      const newItems = Array.from(Array(totalSlots), (_, index) => {
-        const slotNum = index + 1;
-        // Cari item existing di slot ini
-        const existing = existingItems.find((it) => it.slot === slotNum);
-        return existing ?? { slot: slotNum };
-      });
-
-      state.leftInventory = {
+    // Setup clothing inventory terpisah dari server stash
+    setupClothingInventory: (state, action: PayloadAction<Inventory | null>) => {
+      if (!action.payload) {
+        state.clothingInventory = null;
+        return;
+      }
+      const inv = action.payload;
+      const curTime = Math.floor(Date.now() / 1000);
+      state.clothingInventory = {
         ...inv,
-        baseSlots: newBase,
-        slots: totalSlots,
-        items: newItems,
+        items: Array.from(Array(inv.slots), (_, index) => {
+          const item = Object.values(inv.items).find((item) => item?.slot === index + 1) || {
+            slot: index + 1,
+          };
+          return item;
+        }),
       };
+    },
+    // Refresh single slot di clothing inventory
+    refreshClothingSlot: (state, action: PayloadAction<{ slot: number; item: any }>) => {
+      if (!state.clothingInventory) return;
+      const { slot, item } = action.payload;
+      if (slot < 1 || slot > state.clothingInventory.slots) return;
+      state.clothingInventory.items[slot - 1] = item || { slot };
     },
   },
   extraReducers: (builder) => {
@@ -125,12 +116,14 @@ export const {
   stackSlots,
   refreshSlots,
   setContainerWeight,
-  setBaseSlots,
+  setupClothingInventory,
+  refreshClothingSlot,
 } = inventorySlice.actions;
 
-export const selectLeftInventory  = (state: RootState) => state.inventory.leftInventory;
-export const selectRightInventory = (state: RootState) => state.inventory.rightInventory;
-export const selectItemAmount     = (state: RootState) => state.inventory.itemAmount;
-export const selectIsBusy         = (state: RootState) => state.inventory.isBusy;
+export const selectLeftInventory      = (state: RootState) => state.inventory.leftInventory;
+export const selectRightInventory     = (state: RootState) => state.inventory.rightInventory;
+export const selectClothingInventory  = (state: RootState) => state.inventory.clothingInventory;
+export const selectItemAmount         = (state: RootState) => state.inventory.itemAmount;
+export const selectIsBusy             = (state: RootState) => state.inventory.isBusy;
 
 export default inventorySlice.reducer;
