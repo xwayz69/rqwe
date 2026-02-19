@@ -20,22 +20,18 @@ const InventoryGrid: React.FC<{ inventory: Inventory }> = ({ inventory }) => {
     }
   }, [entry]);
 
-  // Tampilkan SEMUA slots termasuk clothing slots (slot baseSlots+1 .. end)
-  const baseSlots    = inventory.baseSlots ?? inventory.slots;
-  const displayItems = inventory.items; // semua slot, termasuk clothing
+  // Untuk player inventory: hanya tampilkan slot 1..baseSlots
+  // Clothing slots (baseSlots+1 .. end) hanya tampil di panel CharacterOutfit
+  const baseSlots   = inventory.baseSlots ?? inventory.slots;
+  const displayItems = inventory.items.slice(0, baseSlots);
 
   // Hitung berat hanya dari slot inventory biasa (exclude clothing slots)
-  const regularItems = useMemo(
-    () => inventory.items.slice(0, baseSlots),
-    [inventory.items, baseSlots]
-  );
-
   const weight = useMemo(
     () =>
       inventory.maxWeight !== undefined
-        ? Math.floor(getTotalWeight(regularItems) * 1000) / 1000
+        ? Math.floor(getTotalWeight(displayItems) * 1000) / 1000
         : 0,
-    [inventory.maxWeight, regularItems]
+    [inventory.maxWeight, displayItems]
   );
 
   return (

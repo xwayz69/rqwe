@@ -85,17 +85,12 @@ export const isSlotWithItem = (slot: Slot, strict: boolean = false): slot is Slo
 export const canStack = (sourceSlot: Slot, targetSlot: Slot) =>
   sourceSlot.name === targetSlot.name && isEqual(sourceSlot.metadata, targetSlot.metadata);
 
-export const findAvailableSlot = (item: Slot, data: ItemData, items: Slot[], baseSlots?: number) => {
-  // Hanya cari di slot inventory biasa, exclude clothing slots
-  const searchItems = baseSlots !== undefined ? items.slice(0, baseSlots) : items;
+export const findAvailableSlot = (item: Slot, data: ItemData, items: Slot[]) => {
+  if (!data.stack) return items.find((target) => target.name === undefined);
 
-  if (!data.stack) return searchItems.find((target) => target.name === undefined);
+  const stackableSlot = items.find((target) => target.name === item.name && isEqual(target.metadata, item.metadata));
 
-  const stackableSlot = searchItems.find(
-    (target) => target.name === item.name && isEqual(target.metadata, item.metadata)
-  );
-
-  return stackableSlot || searchItems.find((target) => target.name === undefined);
+  return stackableSlot || items.find((target) => target.name === undefined);
 };
 
 export const getTargetInventory = (

@@ -9,8 +9,6 @@ import { SlotWithItem } from '../../typings';
 import { Items } from '../../store/items';
 import Fade from './transitions/Fade';
 
-const DUMMY_ITEM_NAME = 'clothing_placeholder';
-
 interface ItemNotificationProps {
   item: SlotWithItem;
   text: string;
@@ -72,9 +70,6 @@ export const ItemNotificationsProvider = ({ children }: { children: React.ReactN
   };
 
   useNuiEvent<[item: SlotWithItem, text: string, count?: number]>('itemNotify', ([item, text, count]) => {
-    // ── Filter: jangan tampilkan notifikasi untuk dummy placeholder ────────
-    if (!item || item.name === DUMMY_ITEM_NAME) return;
-
     add({ item: item, text: count ? `${Locale[text]} ${count}x` : `${Locale[text]}` });
   });
 
