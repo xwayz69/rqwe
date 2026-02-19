@@ -10,25 +10,26 @@ import { fetchNui } from '../../utils/fetchNui';
 import { CLOTHING_ITEM_REGISTRY, CLOTHES_SLOTS, PROPS_SLOTS, ClothingSlotDef } from '../../typings/clothing';
 import { Items } from '../../store/items';
 
-// Urutan clothing slot — harus sama dengan sv_clothing.lua CLOTHING_SLOT_ORDER
+const DUMMY_ITEM_NAME = 'clothing_placeholder';
+
 const CLOTHING_SLOT_ORDER: Array<{ category: string; id: number }> = [
-  { category: 'clothes', id: 0  }, // Head
-  { category: 'clothes', id: 1  }, // Masks
-  { category: 'clothes', id: 2  }, // Hair
-  { category: 'clothes', id: 3  }, // Torsos
-  { category: 'clothes', id: 4  }, // Legs
-  { category: 'clothes', id: 5  }, // Bags
-  { category: 'clothes', id: 6  }, // Shoes
-  { category: 'clothes', id: 7  }, // Accessories
-  { category: 'clothes', id: 8  }, // Undershirts
-  { category: 'clothes', id: 9  }, // Body Armors
-  { category: 'clothes', id: 10 }, // Decals
-  { category: 'clothes', id: 11 }, // Tops
-  { category: 'props',   id: 0  }, // Hats
-  { category: 'props',   id: 1  }, // Glasses
-  { category: 'props',   id: 2  }, // Ears
-  { category: 'props',   id: 6  }, // Watches
-  { category: 'props',   id: 7  }, // Bracelets
+  { category: 'clothes', id: 0  },
+  { category: 'clothes', id: 1  },
+  { category: 'clothes', id: 2  },
+  { category: 'clothes', id: 3  },
+  { category: 'clothes', id: 4  },
+  { category: 'clothes', id: 5  },
+  { category: 'clothes', id: 6  },
+  { category: 'clothes', id: 7  },
+  { category: 'clothes', id: 8  },
+  { category: 'clothes', id: 9  },
+  { category: 'clothes', id: 10 },
+  { category: 'clothes', id: 11 },
+  { category: 'props',   id: 0  },
+  { category: 'props',   id: 1  },
+  { category: 'props',   id: 2  },
+  { category: 'props',   id: 6  },
+  { category: 'props',   id: 7  },
 ];
 
 const getInvSlotNum = (baseSlots: number, category: string, id: number): number => {
@@ -42,14 +43,12 @@ const itemMatchesSlot = (item: SlotWithItem, slotDef: ClothingSlotDef): boolean 
   const meta    = item.metadata || {};
   const metaCat = meta.clothingCategory;
   const metaId  = meta.clothingComponentId;
-
   if (metaCat !== undefined || metaId !== undefined) {
     if (!metaCat) return false;
     if (metaCat !== slotDef.category) return false;
     if (metaId !== undefined) return Number(metaId) === slotDef.id;
     return true;
   }
-
   const reg = CLOTHING_ITEM_REGISTRY[item.name];
   if (reg) return reg.category === slotDef.category && reg.componentId === slotDef.id;
   return false;
@@ -58,16 +57,18 @@ const itemMatchesSlot = (item: SlotWithItem, slotDef: ClothingSlotDef): boolean 
 // ─── Single Clothing Slot ────────────────────────────────────────────────────
 const ClothingSlot: React.FC<{ slotDef: ClothingSlotDef }> = ({ slotDef }) => {
   const dispatch      = useAppDispatch();
-  const manager       = useDragDropManager();
   const leftInventory = useAppSelector(selectLeftInventory);
   const timerRef      = React.useRef<number | null>(null);
 
   const baseSlots  = leftInventory.baseSlots ?? leftInventory.slots;
   const invSlotNum = getInvSlotNum(baseSlots, slotDef.category, slotDef.id);
-  const currentItem = invSlotNum > 0 ? leftInventory.items[invSlotNum - 1] : undefined;
-  const hasItem     = currentItem != null && isSlotWithItem(currentItem);
+  const rawItem    = invSlotNum > 0 ? leftInventory.items[invSlotNum - 1] : undefined;
 
-  // ── DRAG (dari clothing slot balik ke inventory) ──────────────────────────
+  // Dummy placeholder → anggap slot kosong
+  const isDummy   = rawItem != null && isSlotWithItem(rawItem) && rawItem.name === DUMMY_ITEM_NAME;
+  const hasItem   = rawItem != null && isSlotWithItem(rawItem) && !isDummy;
+  const currentItem = hasItem ? rawItem as SlotWithItem : undefined;
+
   const canDragOut = useCallback(() => hasItem, [hasItem]);
 
   const [{ isDragging }, drag] = useDrag<DragSource, void, { isDragging: boolean }>(
@@ -78,13 +79,12 @@ const ClothingSlot: React.FC<{ slotDef: ClothingSlotDef }> = ({ slotDef }) => {
         hasItem && currentItem
           ? {
               inventory: InventoryType.PLAYER,
-              item: { name: (currentItem as SlotWithItem).name, slot: invSlotNum },
-              image: `url(${getItemUrl(currentItem as SlotWithItem) || 'none'})`,
+              item: { name: currentItem.name, slot: invSlotNum },
+              image: `url(${getItemUrl(currentItem) || 'none'})`,
             }
           : null,
       canDrag: canDragOut,
       end: (_item, monitor) => {
-        // Kalau drop berhasil ke slot inventory biasa, trigger unequip di server
         if (monitor.didDrop() && hasItem && currentItem) {
           fetchNui('unequipClothing', {
             slot:        invSlotNum,
@@ -97,35 +97,28 @@ const ClothingSlot: React.FC<{ slotDef: ClothingSlotDef }> = ({ slotDef }) => {
     [hasItem, currentItem, invSlotNum, slotDef]
   );
 
-  // ── DROP (dari inventory ke clothing slot) ────────────────────────────────
   const [{ isOver, canDrop }, drop] = useDrop<DragSource, void, { isOver: boolean; canDrop: boolean }>(
     () => ({
       accept: 'SLOT',
       collect: (m) => ({ isOver: m.isOver(), canDrop: m.canDrop() }),
-
       canDrop: (source) => {
-        // Hanya dari player inventory, bukan dari clothing slot lain
         if (source.inventory !== InventoryType.PLAYER) return false;
         if (invSlotNum <= 0) return false;
         if (source.item.slot === invSlotNum) return false;
-        if (source.item.slot > baseSlots) return false; // jangan dari sesama clothing slot
-
+        if (source.item.slot > baseSlots) return false;
         const sourceItem = leftInventory.items[source.item.slot - 1];
         if (!isSlotWithItem(sourceItem)) return false;
+        // Jangan bisa drop dummy ke clothing slot lain
+        if (sourceItem.name === DUMMY_ITEM_NAME) return false;
         return itemMatchesSlot(sourceItem, slotDef);
       },
-
       drop: (source) => {
         dispatch(closeTooltip());
         if (invSlotNum <= 0) return;
-
-        // Pindahkan item ke clothing slot via onDrop (swap/move di redux)
         onDrop(source, {
           inventory: InventoryType.PLAYER,
           item: { slot: invSlotNum },
         });
-
-        // Trigger server untuk apply visual ke ped
         const sourceItem = leftInventory.items[source.item.slot - 1] as SlotWithItem;
         fetchNui('equipClothing', {
           slot:        invSlotNum,
@@ -142,30 +135,18 @@ const ClothingSlot: React.FC<{ slotDef: ClothingSlotDef }> = ({ slotDef }) => {
     [slotDef, leftInventory, invSlotNum, baseSlots]
   );
 
-  // Gabungkan drag + drop ref
-  const connectRef = (el: HTMLDivElement | null) => {
-    drag(el);
-    drop(el);
-  };
+  const connectRef = (el: HTMLDivElement | null) => { drag(el); drop(el); };
 
-  // ── Unequip via tombol ✕ ──────────────────────────────────────────────────
   const handleUnequip = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!hasItem || !currentItem) return;
     dispatch(closeTooltip());
-
-    // Cari slot kosong pertama di inventory biasa
-    const emptySlot = leftInventory.items
-      .slice(0, baseSlots)
-      .find((s) => !isSlotWithItem(s));
-
-    if (!emptySlot) return; // inventory penuh
-
+    const emptySlot = leftInventory.items.slice(0, baseSlots).find((s) => !isSlotWithItem(s));
+    if (!emptySlot) return;
     onDrop(
-      { inventory: InventoryType.PLAYER, item: { name: (currentItem as SlotWithItem).name, slot: invSlotNum } },
+      { inventory: InventoryType.PLAYER, item: { name: currentItem.name, slot: invSlotNum } },
       { inventory: InventoryType.PLAYER, item: { slot: emptySlot.slot } }
     );
-
     fetchNui('unequipClothing', {
       slot:        invSlotNum,
       category:    slotDef.category,
@@ -180,8 +161,8 @@ const ClothingSlot: React.FC<{ slotDef: ClothingSlotDef }> = ({ slotDef }) => {
       ref={connectRef}
       className={[
         'cslot',
-        hasItem            ? 'cslot-equipped' : '',
-        isDragging         ? 'cslot-dragging' : '',
+        hasItem           ? 'cslot-equipped' : '',
+        isDragging        ? 'cslot-dragging'  : '',
         isOver && canDrop  ? 'cslot-accept'   : '',
         isOver && !canDrop ? 'cslot-reject'   : '',
       ].join(' ')}
@@ -193,7 +174,7 @@ const ClothingSlot: React.FC<{ slotDef: ClothingSlotDef }> = ({ slotDef }) => {
       onMouseEnter={() => {
         if (hasItem && currentItem) {
           timerRef.current = window.setTimeout(() => {
-            dispatch(openTooltip({ item: currentItem as SlotWithItem, inventoryType: 'player' }));
+            dispatch(openTooltip({ item: currentItem, inventoryType: 'player' }));
           }, 500);
         }
       }}
@@ -203,6 +184,7 @@ const ClothingSlot: React.FC<{ slotDef: ClothingSlotDef }> = ({ slotDef }) => {
       }}
       title={slotDef.part}
     >
+      {/* Slot kosong (termasuk dummy) — tampil icon + label */}
       {!hasItem && (
         <>
           <span className="cslot-icon">{slotDef.icon}</span>
@@ -210,20 +192,16 @@ const ClothingSlot: React.FC<{ slotDef: ClothingSlotDef }> = ({ slotDef }) => {
         </>
       )}
 
+      {/* Slot berisi item beneran */}
       {hasItem && currentItem && (
         <>
-          {/* Tombol unequip ✕ */}
-          <button className="cslot-unequip" onClick={handleUnequip} title="Unequip">
-            ✕
-          </button>
-
+          <button className="cslot-unequip" onClick={handleUnequip} title="Unequip">✕</button>
           <span className="cslot-icon-sm">{slotDef.icon}</span>
-
           <div className="inventory-slot-label-box" style={{ position: 'absolute', bottom: 0, left: 0, right: 0 }}>
             <div className="inventory-slot-label-text">
-              {(currentItem as SlotWithItem).metadata?.label
-                || Items[(currentItem as SlotWithItem).name]?.label
-                || (currentItem as SlotWithItem).name}
+              {currentItem.metadata?.label
+                || Items[currentItem.name]?.label
+                || currentItem.name}
             </div>
           </div>
         </>

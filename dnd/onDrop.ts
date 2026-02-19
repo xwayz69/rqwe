@@ -4,43 +4,66 @@ import { store } from '../store';
 import { DragSource, DropTarget, InventoryType, SlotWithItem } from '../typings';
 import { moveSlots, stackSlots, swapSlots } from '../store/inventory';
 import { Items } from '../store/items';
+import { CLOTHING_ITEM_REGISTRY } from '../typings/clothing';
+
+const DUMMY_ITEM_NAME = 'clothing_placeholder';
+
+function isClothingItem(name: string, metadata?: Record<string, any>): boolean {
+  if (!name || name === DUMMY_ITEM_NAME) return false;
+  if (metadata?.clothingCategory !== undefined) return true;
+  return !!CLOTHING_ITEM_REGISTRY[name];
+}
 
 export const onDrop = (source: DragSource, target?: DropTarget) => {
   const { inventory: state } = store.getState();
-
   const { sourceInventory, targetInventory } = getTargetInventory(state, source.inventory, target?.inventory);
-
   const sourceSlot = sourceInventory.items[source.item.slot - 1] as SlotWithItem;
 
-  const sourceData = Items[sourceSlot.name];
+  // Block drag dummy
+  if (sourceSlot.name === DUMMY_ITEM_NAME) return;
 
-  if (sourceData === undefined) return console.error(`${sourceSlot.name} item data undefined!`);
-
-  // If dragging from container slot
+  // Container checks
   if (sourceSlot.metadata?.container !== undefined) {
-    // Prevent storing container in container
     if (targetInventory.type === InventoryType.CONTAINER)
-      return console.log(`Cannot store container ${sourceSlot.name} inside another container`);
-
-    // Prevent dragging of container slot when opened
+      return console.log(`Cannot store container inside another container`);
     if (state.rightInventory.id === sourceSlot.metadata.container)
-      return console.log(`Cannot move container ${sourceSlot.name} when opened`);
+      return console.log(`Cannot move container when opened`);
   }
 
-const targetBaseSlots =
-  targetInventory.type === 'player'
+  const leftInv   = state.leftInventory;
+  const baseSlots = leftInv.type === 'player' ? (leftInv.baseSlots ?? leftInv.slots) : undefined;
+
+  // --- Guard: clothing slot → normal slot berisi item biasa = BLOCK ---
+  if (target && baseSlots !== undefined) {
+    const sourceFromClothing = sourceInventory.type === 'player' && source.item.slot > baseSlots;
+    const targetIsClothing   = targetInventory.type === 'player' && target.item.slot > baseSlots;
+
+    if (sourceFromClothing && !targetIsClothing) {
+      const t = targetInventory.items[target.item.slot - 1];
+      if (isSlotWithItem(t) && t.name !== DUMMY_ITEM_NAME) {
+        return; // silent block
+      }
+    }
+  }
+
+  const targetBaseSlots = targetInventory.type === 'player'
     ? (targetInventory.baseSlots ?? targetInventory.slots)
     : undefined;
 
-const targetSlot = target
-  ? targetInventory.items[target.item.slot - 1]
-  : findAvailableSlot(sourceSlot, sourceData, targetInventory.items, targetBaseSlots);
+  // sourceData - bisa undefined untuk clothing items
+  const sourceData = Items[sourceSlot.name];
+  const sourceIsClothing = isClothingItem(sourceSlot.name, sourceSlot.metadata);
 
-  if (targetSlot === undefined) return console.error('Target slot undefined!');
+  const targetSlot = target
+    ? targetInventory.items[target.item.slot - 1]
+    : sourceData
+      ? findAvailableSlot(sourceSlot, sourceData, targetInventory.items, targetBaseSlots)
+      : undefined;
 
-  // If dropping on container slot when opened
+  if (targetSlot === undefined) return;
+
   if (targetSlot.metadata?.container !== undefined && state.rightInventory.id === targetSlot.metadata.container)
-    return console.log(`Cannot swap item ${sourceSlot.name} with container ${targetSlot.name} when opened`);
+    return;
 
   const count =
     state.shiftPressed && sourceSlot.count > 1 && sourceInventory.type !== 'shop'
@@ -54,30 +77,31 @@ const targetSlot = target
     toSlot: targetSlot,
     fromType: sourceInventory.type,
     toType: targetInventory.type,
-    count: count,
+    count,
   };
 
-  store.dispatch(
-    validateMove({
-      ...data,
-      fromSlot: sourceSlot.slot,
-      toSlot: targetSlot.slot,
-    })
-  );
+  const targetIsDummy = isSlotWithItem(targetSlot) && targetSlot.name === DUMMY_ITEM_NAME;
 
-  isSlotWithItem(targetSlot, true)
-    ? sourceData.stack && canStack(sourceSlot, targetSlot)
-      ? store.dispatch(
-          stackSlots({
-            ...data,
-            toSlot: targetSlot,
-          })
-        )
-      : store.dispatch(
-          swapSlots({
-            ...data,
-            toSlot: targetSlot,
-          })
-        )
-    : store.dispatch(moveSlots(data));
+  // Dispatch ke Redux untuk update UI
+  if (!targetIsDummy && isSlotWithItem(targetSlot, true)) {
+    if (sourceData?.stack && canStack(sourceSlot, targetSlot)) {
+      store.dispatch(stackSlots({ ...data, toSlot: targetSlot }));
+    } else {
+      store.dispatch(swapSlots({ ...data, toSlot: targetSlot }));
+    }
+  } else {
+    store.dispatch(moveSlots(data));
+  }
+
+  // Validasi ke server - SKIP untuk clothing items (server pakai equipClothing/unequipClothing)
+  // Skip juga kalau target dummy (server tidak perlu tau)
+  if (!sourceIsClothing && !targetIsDummy) {
+    store.dispatch(
+      validateMove({
+        ...data,
+        fromSlot: sourceSlot.slot,
+        toSlot: targetSlot.slot,
+      })
+    );
+  }
 };
