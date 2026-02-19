@@ -1,7 +1,7 @@
 import React, { useCallback, useRef } from 'react';
 import { DragSource, Inventory, InventoryType, Slot, SlotWithItem } from '../../typings';
 import { useDrag, useDragDropManager, useDrop } from 'react-dnd';
-import { useAppDispatch } from '../../store';
+import { useAppDispatch, useAppSelector } from '../../store';
 import WeightBar from '../utils/WeightBar';
 import { onDrop } from '../../dnd/onDrop';
 import { onBuy } from '../../dnd/onBuy';
@@ -15,6 +15,63 @@ import { ItemsPayload } from '../../reducers/refreshSlots';
 import { closeTooltip, openTooltip } from '../../store/tooltip';
 import { openContextMenu } from '../../store/contextMenu';
 import { useMergeRefs } from '@floating-ui/react';
+import { selectLeftInventory } from '../../store/inventory';
+import {
+  CLOTHING_ITEM_REGISTRY,
+  CLOTHES_SLOTS,
+  PROPS_SLOTS,
+  ClothingSlotDef,
+} from '../../typings/clothing';
+
+// Urutan clothing slot — harus sama dengan CharacterOutfit.tsx & sv_clothing.lua
+const CLOTHING_SLOT_ORDER: Array<{ category: string; id: number }> = [
+  { category: 'clothes', id: 0  },
+  { category: 'clothes', id: 1  },
+  { category: 'clothes', id: 2  },
+  { category: 'clothes', id: 3  },
+  { category: 'clothes', id: 4  },
+  { category: 'clothes', id: 5  },
+  { category: 'clothes', id: 6  },
+  { category: 'clothes', id: 7  },
+  { category: 'clothes', id: 8  },
+  { category: 'clothes', id: 9  },
+  { category: 'clothes', id: 10 },
+  { category: 'clothes', id: 11 },
+  { category: 'props',   id: 0  },
+  { category: 'props',   id: 1  },
+  { category: 'props',   id: 2  },
+  { category: 'props',   id: 6  },
+  { category: 'props',   id: 7  },
+];
+
+/**
+ * Cek apakah item cocok untuk clothing slot tertentu.
+ * Slot index dihitung dari: clothingSlotIndex = itemSlot - baseSlots - 1
+ */
+const getSlotDefForInvSlot = (invSlot: number, baseSlots: number): ClothingSlotDef | null => {
+  const idx = invSlot - baseSlots - 1;
+  if (idx < 0 || idx >= CLOTHING_SLOT_ORDER.length) return null;
+  const { category, id } = CLOTHING_SLOT_ORDER[idx];
+  const allSlots = [...CLOTHES_SLOTS, ...PROPS_SLOTS];
+  return allSlots.find(s => s.category === category && s.id === id) ?? null;
+};
+
+const itemMatchesClothingSlot = (item: SlotWithItem, slotDef: ClothingSlotDef): boolean => {
+  const meta    = item.metadata || {};
+  const metaCat = meta.clothingCategory;
+  const metaId  = meta.clothingComponentId;
+
+  if (metaCat !== undefined || metaId !== undefined) {
+    if (!metaCat) return false;
+    if (metaCat !== slotDef.category) return false;
+    if (metaId !== undefined) return Number(metaId) === slotDef.id;
+    return true;
+  }
+
+  const reg = CLOTHING_ITEM_REGISTRY[item.name];
+  if (reg) return reg.category === slotDef.category && reg.componentId === slotDef.id;
+  return false;
+};
 
 interface SlotProps {
   inventoryId: Inventory['id'];
@@ -27,9 +84,18 @@ const InventorySlot: React.ForwardRefRenderFunction<HTMLDivElement, SlotProps> =
   { item, inventoryId, inventoryType, inventoryGroups },
   ref
 ) => {
-  const manager = useDragDropManager();
-  const dispatch = useAppDispatch();
-  const timerRef = useRef<number | null>(null);
+  const manager     = useDragDropManager();
+  const dispatch    = useAppDispatch();
+  const timerRef    = useRef<number | null>(null);
+  const leftInv     = useAppSelector(selectLeftInventory);
+
+  const baseSlots   = leftInv.baseSlots ?? leftInv.slots;
+  const isClothingSlot =
+    inventoryType === InventoryType.PLAYER && item.slot > baseSlots;
+
+  const slotDef = isClothingSlot
+    ? getSlotDefForInvSlot(item.slot, baseSlots)
+    : null;
 
   const canDrag = useCallback(() => {
     return canPurchaseItem(item, { type: inventoryType, groups: inventoryGroups }) && canCraftItem(item, inventoryType);
@@ -57,11 +123,12 @@ const InventorySlot: React.ForwardRefRenderFunction<HTMLDivElement, SlotProps> =
     [inventoryType, item]
   );
 
-  const [{ isOver }, drop] = useDrop<DragSource, void, { isOver: boolean }>(
+  const [{ isOver, canDrop }, drop] = useDrop<DragSource, void, { isOver: boolean; canDrop: boolean }>(
     () => ({
       accept: 'SLOT',
       collect: (monitor) => ({
         isOver: monitor.isOver(),
+        canDrop: monitor.canDrop(),
       }),
       drop: (source) => {
         dispatch(closeTooltip());
@@ -77,12 +144,36 @@ const InventorySlot: React.ForwardRefRenderFunction<HTMLDivElement, SlotProps> =
             break;
         }
       },
-      canDrop: (source) =>
-        (source.item.slot !== item.slot || source.inventory !== inventoryType) &&
-        inventoryType !== InventoryType.SHOP &&
-        inventoryType !== InventoryType.CRAFTING,
+      canDrop: (source) => {
+        // Slot & inventory yang sama tidak bisa di-drop ke diri sendiri
+        if (source.item.slot === item.slot && source.inventory === inventoryType) return false;
+
+        // Tidak bisa drop ke shop / crafting
+        if (inventoryType === InventoryType.SHOP || inventoryType === InventoryType.CRAFTING) return false;
+
+        // ── Clothing slot: validasi kecocokan item ──────────────────────────
+        if (isClothingSlot) {
+          if (!slotDef) return false; // slot tidak dikenali, tolak semua
+
+          // Hanya terima dari player inventory
+          if (source.inventory !== InventoryType.PLAYER) return false;
+
+          // Jangan dari sesama clothing slot (biarkan CharacterOutfit yang handle swap antar slot)
+          const sourceIsClothing = source.item.slot > baseSlots;
+          if (sourceIsClothing) return false;
+
+          // Cek item yang di-drag cocok dengan slot ini
+          const sourceItem = leftInv.items[source.item.slot - 1];
+          if (!isSlotWithItem(sourceItem)) return false;
+          return itemMatchesClothingSlot(sourceItem, slotDef);
+        }
+
+        // ── Slot biasa: jangan terima item dari clothing slot ──────────────
+        // (Clothing slot ke inventory biasa dibiarkan — user sengaja unequip)
+        return true;
+      },
     }),
-    [inventoryType, item]
+    [inventoryType, item, isClothingSlot, slotDef, baseSlots, leftInv]
   );
 
   useNuiEvent('refreshSlots', (data: { items?: ItemsPayload | ItemsPayload[] }) => {
@@ -119,6 +210,18 @@ const InventorySlot: React.ForwardRefRenderFunction<HTMLDivElement, SlotProps> =
 
   const refs = useMergeRefs([connectRef, ref]);
 
+  // Border visual beda untuk clothing slot (kosong: dashed, hover reject/accept)
+  const getSlotBorder = () => {
+    if (isOver && isClothingSlot) {
+      return canDrop
+        ? '1px dashed rgba(79,195,247,0.8)'   // accept — biru
+        : '1px dashed rgba(239,83,80,0.8)';   // reject — merah
+    }
+    if (isOver) return '1px dashed rgba(255,255,255,0.4)';
+    if (isClothingSlot && !isSlotWithItem(item)) return '1px dashed rgba(255,255,255,0.12)';
+    return '';
+  };
+
   return (
     <div
       ref={refs}
@@ -132,7 +235,11 @@ const InventorySlot: React.ForwardRefRenderFunction<HTMLDivElement, SlotProps> =
             : undefined,
         opacity: isDragging ? 0.4 : 1.0,
         backgroundImage: `url(${item?.name ? getItemUrl(item as SlotWithItem) : 'none'}`,
-        border: isOver ? '1px dashed rgba(255,255,255,0.4)' : '',
+        border: getSlotBorder(),
+        // Clothing slot kosong: sedikit lebih gelap biar keliatan beda
+        backgroundColor: isClothingSlot && !isSlotWithItem(item)
+          ? 'rgba(79,195,247,0.03)'
+          : undefined,
       }}
     >
       {isSlotWithItem(item) && (
@@ -216,6 +323,18 @@ const InventorySlot: React.ForwardRefRenderFunction<HTMLDivElement, SlotProps> =
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Icon hint untuk clothing slot kosong */}
+      {isClothingSlot && !isSlotWithItem(item) && slotDef && (
+        <div style={{
+          position: 'absolute', inset: 0,
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center',
+          pointerEvents: 'none',
+        }}>
+          <span style={{ fontSize: 18, opacity: 0.2 }}>{slotDef.icon}</span>
         </div>
       )}
     </div>
